@@ -6,14 +6,15 @@
     "build": "bun run build.ts",
     "dev": "bun tools/dev.ts",
     "dev:build": "bun run build.ts --watch",
-    "start": "$GODOTJS --path .",
-    "headless": "$GODOTJS --headless --quit-after 300 --path .",
+    "start": "bun tools/godot.ts --path .",
+    "headless": "bun tools/godot.ts --headless --quit-after 300 --path .",
     "types": "bun tools/types.ts",
     "types:shim": "bun tools/types.ts --shim",
-    "headless:mapped": "$GODOTJS --headless --quit-after 300 --path . 2>&1 | bun tools/unmap.ts",
+    "headless:mapped": "bun tools/godot.ts --headless --quit-after 300 --path . 2>&1 | bun tools/unmap.ts",
     "typecheck": "tsc --noEmit",
     "bun": "bun bun/entrypoint.ts",
-    "watch:sim": "bun --watch bun/entrypoint.ts"
+    "watch:sim": "bun --watch bun/entrypoint.ts",
+    "editor": "bun tools/godot.ts --editor --path ."
   },
   "devDependencies": {
     "@types/bun": "latest",
