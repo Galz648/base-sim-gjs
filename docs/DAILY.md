@@ -1,5 +1,14 @@
 # Working on Base Sim day to day
 
+## After cloning
+
+```sh
+bun install
+bun run types      # generates the full Godot API typings (about 6 MB, gitignored) so Cursor can autocomplete Godot
+```
+
+Then in Cursor: **Cmd+Shift+P, "TypeScript: Restart TS Server"**, and accept "Use workspace version" if it asks. The settings in `.vscode/` already point Cursor at the project's own TypeScript.
+
 ## Start (two terminals)
 
 ```sh

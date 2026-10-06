@@ -9,11 +9,7 @@ const bind = createClassBinder();
 @bind()
 export default class GameRoot extends Node {
   _ready(): void {
-    const sim = new Sim({
-      floor: Math.floor,
-      clamp: (value: number, min: number, max: number) =>
-        Math.min(Math.max(value, min), max),
-    });
+    const sim = new Sim();
     sim.start();
   }
 }

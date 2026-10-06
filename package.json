@@ -12,6 +12,7 @@
     "types:shim": "bun tools/types.ts --shim",
     "headless:mapped": "bun tools/godot.ts --headless --quit-after 300 --path . 2>&1 | bun tools/unmap.ts",
     "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch",
     "bun": "bun bun/entrypoint.ts",
     "watch:sim": "bun --watch bun/entrypoint.ts",
     "editor": "bun tools/godot.ts --editor --path .",

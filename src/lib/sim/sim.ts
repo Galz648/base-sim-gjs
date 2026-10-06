@@ -1,4 +1,3 @@
-import { MathPort } from "./boundary";
 import { CONFIG } from "./config";
 import {
   GameState,
@@ -22,11 +21,9 @@ type Store = {
 type Time = { hour: number; day: number };
 
 class Sim {
-  private math: MathPort;
   store: Store;
 
-  constructor(math: MathPort) {
-    this.math = math;
+  constructor() {
     this.store = {
       state: {
         roster: [
@@ -93,7 +90,7 @@ class Sim {
     const increment = (x: number) => x + 1;
     const total_time = increment(time.hour) + time.day * 24;
     const hour = total_time % 24;
-    const day = this.math.floor(total_time / 24);
+    const day = Math.floor(total_time / 24);
 
     return {
       hour,
