@@ -9,6 +9,26 @@ bun run types      # generates the full Godot API typings (about 6 MB, gitignore
 
 Then in Cursor: **Cmd+Shift+P, "TypeScript: Restart TS Server"**, and accept "Use workspace version" if it asks. The settings in `.vscode/` already point Cursor at the project's own TypeScript.
 
+## Exports, signals and @onready (the build plugin)
+
+`tools/plugin/` rewrites your TypeScript at build time (works on the stock engine; error positions still map to your lines). Vocabulary, from `src/lib/gd.ts`:
+
+```ts
+import { gd } from "../lib/gd";
+
+@gd.class
+export default class Player extends Node {
+  @gd.export() accessor speed: number = 200.0;   // 200.0 is a float, 100 is an int (read from the literal)
+  @gd.export() accessor health: number = 100;
+  @gd.export() accessor tags: string[] = [];      // Array[String]
+  @gd.onready("Label") accessor label!: Label;    // later @onready fields still run if one path is missing
+  @gd.signal() accessor hit!: Signal<(amount: number) => void>;
+}
+// signal.connect accepts a plain function: this.hit.connect((n) => console.log(n))
+```
+
+If the plugin cannot tell a type (`any`, an open generic, `number[]`) the build fails with a clear message instead of guessing. `new Node()` plus `set_script()` on a JS class still skips the constructor on the stock engine; build the instance with `ResourceLoader.load(path).call("new")` (the plugin warns at build time).
+
 ## Start (two terminals)
 
 ```sh
