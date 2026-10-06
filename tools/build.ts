@@ -1,10 +1,12 @@
 // Every .ts under src/ is a Bun entrypoint except src/lib/** and *.d.ts (shared code imported by scripts).
 // gen/**/*.ts is compiled too: the editor loads those typings as scripts and errors if the JS is missing.
-// Output mirrors the res:// path under .godot/GodotJS/ (root: "."). godot* stay external (engine-provided).
+// Output mirrors the res:// path under .godot/GodotJS/ (root: the project directory). godot* stay external (engine-provided).
 import { existsSync, mkdirSync, readFileSync, watch, writeFileSync } from "node:fs";
-import { dirname, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
 
-const OUT = ".godot/GodotJS";
+// Scripts run from the project root; resolve against it anyway so a move into tools/ cannot shift outdir or entrypoints.
+const ROOT = join(import.meta.dir, "..");
+const OUT = join(ROOT, ".godot/GodotJS");
 
 function entrypoints(): string[] {
   const files: string[] = [];
@@ -12,10 +14,10 @@ function entrypoints(): string[] {
     const norm = path.replaceAll("\\", "/").replace(/^\.\//, "");
     if (norm.endsWith(".d.ts")) return;
     if (norm === "src/lib" || norm.startsWith("src/lib/")) return;
-    files.push(norm);
+    files.push(join(ROOT, norm));
   };
-  for (const path of new Bun.Glob("src/**/*.ts").scanSync(".")) push(path);
-  for (const path of new Bun.Glob("gen/**/*.ts").scanSync(".")) push(path);
+  for (const path of new Bun.Glob("src/**/*.ts").scanSync(ROOT)) push(path);
+  for (const path of new Bun.Glob("gen/**/*.ts").scanSync(ROOT)) push(path);
   return files;
 }
 
@@ -23,7 +25,7 @@ export async function build(): Promise<boolean> {
   const result = await Bun.build({
     entrypoints: entrypoints(),
     outdir: OUT,
-    root: ".", // keeps the src/ prefix so the output mirrors the res:// path
+    root: ROOT, // keeps the src/ prefix so the output mirrors the res:// path
     format: "cjs",
     target: "browser", // no node builtins assumed
     external: ["godot", "godot.annotations", "godot-jsb", "jsb.core"],
@@ -47,7 +49,7 @@ export async function build(): Promise<boolean> {
   writeFileSync(`${OUT}/package.json`, '{"type":"commonjs"}\n');
   for (const out of result.outputs) {
     if (!out.path.endsWith(".js")) continue;
-    console.log(`built ${relative(process.cwd(), out.path)} (${(out.size / 1024).toFixed(0)} KB)`);
+    console.log(`built ${relative(ROOT, out.path)} (${(out.size / 1024).toFixed(0)} KB)`);
   }
   return true;
 }
@@ -80,6 +82,9 @@ if (import.meta.main) {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => { timer = undefined; void runBuild(); }, 50);
     };
-    for (const dir of ["src", "gen"]) if (existsSync(dir)) watch(dir, { recursive: true }, schedule);
+    for (const dir of ["src", "gen"]) {
+      const abs = join(ROOT, dir);
+      if (existsSync(abs)) watch(abs, { recursive: true }, schedule);
+    }
   }
 }

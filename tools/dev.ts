@@ -2,17 +2,17 @@
 // GODOT_ARGS is split on spaces and appended after `--path .` (tests pass `--headless`).
 import { execFileSync } from "node:child_process";
 import { existsSync, watch } from "node:fs";
+import { join } from "node:path";
 import type { Subprocess } from "bun";
-import { build } from "../build.ts";
+import { build } from "./build.ts";
+import { requireGodot } from "./config.ts";
+
+const ROOT = join(import.meta.dir, "..");
 
 const DEBOUNCE_MS = 150;
 const KILL_GRACE_MS = 2000;
 
-const godot = process.env.GODOTJS;
-if (!godot) {
-  console.error("error: GODOTJS is unset. Export GODOTJS to the GodotJS editor binary and re-run.");
-  process.exit(1);
-}
+const godot = requireGodot();
 const extraArgs = (process.env.GODOT_ARGS ?? "").split(" ").filter((arg) => arg.length > 0);
 
 let game: Subprocess | null = null;
@@ -70,7 +70,7 @@ async function restartGame(): Promise<void> {
   if (stopping) return;
   const proc = Bun.spawn({
     cmd: [godot, "--path", ".", ...extraArgs],
-    cwd: process.cwd(),
+    cwd: ROOT,
     stdin: "ignore",
     stdout: "inherit",
     stderr: "inherit",
@@ -151,8 +151,9 @@ process.on("exit", () => {
 await requestBuild();
 console.log("watching src/ ...");
 for (const dir of ["src", "gen"]) {
-  if (!existsSync(dir)) continue;
-  watch(dir, { recursive: true }, (_event, filename) => {
+  const abs = join(ROOT, dir);
+  if (!existsSync(abs)) continue;
+  watch(abs, { recursive: true }, (_event, filename) => {
     const name = filename == null ? null : String(filename);
     if (!isSourceChange(name)) return;
     schedule();

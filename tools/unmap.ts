@@ -1,6 +1,6 @@
 // Rewrites `.godot/GodotJS/src/main.js:LINE:COL` positions in Godot's output to the original `src/...:LINE:COL` using the .js.map next to each bundle.
 // GodotJS (quickjs-ng) does not translate stack traces itself: its source-map regex expects `file.js:LINE)` without a column.
-// Usage: bun run headless 2>&1 | bun tools/unmap.ts      (build with sourcemap "external", the default in build.ts)
+// Usage: bun run headless 2>&1 | bun tools/unmap.ts      (build with sourcemap "external", the default in tools/build.ts)
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { SourceMapConsumer } from "source-map-js";
