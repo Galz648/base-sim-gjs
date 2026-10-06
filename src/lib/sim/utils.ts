@@ -1,13 +1,19 @@
 import { ActiveMission, GameEvent, GameState, SoldierState } from "./domain";
 
+// ANSI colors only when printing to a real terminal (Bun). Godot's Output panel prints the escape
+// codes raw (and GodotJS has no `process`), so inside Godot the board is plain text.
+const color =
+  typeof process !== "undefined" && process.stdout?.isTTY === true;
+const esc = (code: string): string => (color ? `\x1b[${code}m` : "");
+
 const ansi = {
-  reset: "\x1b[0m",
-  dim: "\x1b[2m",
-  bold: "\x1b[1m",
-  cyan: "\x1b[36m",
-  green: "\x1b[32m",
-  yellow: "\x1b[33m",
-  red: "\x1b[31m",
+  reset: esc("0"),
+  dim: esc("2"),
+  bold: esc("1"),
+  cyan: esc("36"),
+  green: esc("32"),
+  yellow: esc("33"),
+  red: esc("31"),
 };
 
 const dutyAnsi: Record<SoldierState["duty"], string> = {
