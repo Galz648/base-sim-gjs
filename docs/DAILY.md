@@ -68,6 +68,7 @@ These are the things we could only half-verify without you in the editor. Tick t
 
 | Symptom | Try |
 |---|---|
+| `@gd.export() was not rewritten` at startup | a watch build started BEFORE the plugin or `tools/` changed is still running with the old build code; stop it and run `bun run dev:build` again (or `bun run build` once) |
 | Editor shows old code | is `bun run dev:build` running? check its last line; focus the editor window |
 | `no GodotJS binary configured` | `bun tools/config.ts set <path>` (or a project `.env`, see `.env.example`) |
 | Errors show `main.js:21746` instead of `src/...` | you are on the stock binary; use the patched one (`.env`) |
