@@ -198,13 +198,13 @@ class Sim {
     return state;
   }
 
-  start(): void {
+  start(tickMs: number = CONFIG.TICK_DURATION): void {
     // TODO: this should be runtime agnostic, so it fits in GODOT (so no SetInterval, should probably be wrapped in some Timer construct, to mimic Godot roughly)
     setInterval(() => {
       //TODO: choose if the tick should happen before the other events
       const event = this.tick();
       this.store.dispatch(event);
-    }, CONFIG.TICK_DURATION);
+    }, tickMs);
 
     setInterval(() => {
       const freshly_completed = this.store
@@ -222,7 +222,7 @@ class Sim {
       completed_missions_events.forEach((e: CompletedMissionEvent) =>
         this.store.dispatch(e)
       );
-    }, CONFIG.TICK_DURATION);
+    }, tickMs);
   }
 }
 
