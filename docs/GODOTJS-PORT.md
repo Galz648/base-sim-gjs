@@ -39,6 +39,13 @@ bun run typecheck    # tsc --noEmit (also the pre-commit hook: git config core.h
 - Godot **4.6.1** (stock GodotJS release). Your `project.godot` listed 4.7 features; GodotJS for 4.7 is not available as a stock build yet.
 - Gotchas worth knowing: create script instances in code with `load(path).call("new")` (not `new Node()` + `set_script`); GDScript-only globals (`floor`, `clamp`, `print`, `Timer` signal wiring) need their JS forms; JS timers ignore `SceneTree.paused`. See the `godotjs-esm` docs (`GDSCRIPT-TO-GODOTJS.md`, `under-the-hood/`).
 
+## Verified so far (2026-10-06)
+
+- `bun run typecheck` clean; `bun run bun` and the Godot run print the same board (first ticks identical).
+- `bun run dev` rebuilds and relaunches the game on a code edit, one process, none left after Ctrl-C.
+- In the editor (patched GodotJS editor binary, watch build running): F5 runs the sim, the board prints in the Output panel as plain text, and a change to `TICK_DURATION` (1000 to 500) took effect on the next run (twice as fast). Colors are off outside a terminal because the Output panel prints ANSI escapes raw (see `src/lib/sim/utils.ts`).
+- Not verified: clickable errors in this project (patched binary only), the hot_reload addon with this project's scripts, Godot 4.7, Windows.
+
 ## Leftover work carried over (from `docs/INTERNALS.md` at `5d2087b`)
 
 The Bun entry still never dispatches a mission assignment, assignment guards are missing, `step` still throws, and the timer port is not wired. None of that is a GodotJS blocker.
