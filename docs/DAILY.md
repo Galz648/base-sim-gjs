@@ -12,7 +12,7 @@ Edit in Cursor. Press **F5** in the editor to run the game; the board prints in 
 
 No editor? `bun run dev` rebuilds and relaunches a game window on every save; `bun run bun` runs the sim in Bun only (fastest loop for pure sim logic).
 
-All Godot commands (`start`, `headless`, `editor`, `headless:mapped`, `dev`, `types`) read `GODOTJS` from `.env` (copy `.env.example` if it is missing).
+All Godot commands (`start`, `headless`, `editor`, `headless:mapped`, `dev`, `types`) find the GodotJS binary through a config, not a shell export: `GODOTJS` in the shell or in a project `.env`, else the global `~/.config/godotjs/config.json`. Check it with `bun run config`; change it with `bun tools/config.ts set <path>` (it is currently the patched editor build).
 
 ## Manual GUI checks to notice while you work
 
@@ -24,7 +24,7 @@ These are the things we could only half-verify without you in the editor. Tick t
 - [ ] **Reload on save:** with `dev:build` running, saving a script updates the editor (open a script and watch for stale views). The `hot_reload` addon should refresh it without you clicking the window.
 - [ ] **New scripts / new scenes:** add a script under `src/scripts/`, attach it to a node in the editor, run it. The first build after adding a file picks it up in watch mode; note if it does not.
 - [ ] **`@export` in a real script:** add `@bind.export(...)` and see it in the inspector.
-- [ ] **Output noise:** note any `[jsb][Error]` lines that are not your own errors.
+- [ ] **Output noise:** note any `[jsb][Error]` lines that are not your own errors (the toolchain files are now hidden from Godot, so there should be none).
 - [ ] **Colors:** the board is plain text in the editor; colored only under `bun run bun` in a terminal.
 
 ## Gotchas
@@ -40,7 +40,7 @@ These are the things we could only half-verify without you in the editor. Tick t
 | Symptom | Try |
 |---|---|
 | Editor shows old code | is `bun run dev:build` running? check its last line; focus the editor window |
-| `GODOTJS is not set` | create `.env` from `.env.example` |
+| `no GodotJS binary configured` | `bun tools/config.ts set <path>` (or a project `.env`, see `.env.example`) |
 | Errors show `main.js:21746` instead of `src/...` | you are on the stock binary; use the patched one (`.env`) |
-| Output full of "javascript file is missing" | known noise from toolchain files; the toolchain update removes it |
+| "javascript file is missing" for a game script | the file must be under `src/scripts/` and built (`bun run build`) |
 | Weird engine crash on a script | check the script lives under `src/scripts/` and that `.godot/GodotJS/src/scripts/<name>.js` exists |
