@@ -1,5 +1,6 @@
 import { Node } from "godot";
 import { gd } from "../lib/gd";
+import { devState } from "../lib/dev-state";
 import { Sim } from "../lib/sim/sim";
 
 // The sim is plain TypeScript and runs the same under Bun (`bun run bun`) and here, inside Godot.
@@ -12,6 +13,15 @@ export default class GameRoot extends Node {
 
   _ready(): void {
     const sim = new Sim();
+    // Dev-only (a no-op unless `bun run dev` sets GODOTJS_DEV_STATE): keep the whole game state across relaunches.
+    // The Sim replaces store.state on every dispatch, so save() reads it live. Register before start() so no tick
+    // can run before the restored state is in place.
+    devState("sim", {
+      save: () => sim.store.state,
+      load: (state) => {
+        sim.store.state = state;
+      },
+    });
     sim.start(this.tick_ms);
   }
 }
