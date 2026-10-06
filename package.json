@@ -1,0 +1,23 @@
+{
+  "name": "base-sim",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run build.ts",
+    "dev": "bun tools/dev.ts",
+    "dev:build": "bun run build.ts --watch",
+    "start": "$GODOTJS --path .",
+    "headless": "$GODOTJS --headless --quit-after 300 --path .",
+    "types": "bun tools/types.ts",
+    "types:shim": "bun tools/types.ts --shim",
+    "headless:mapped": "$GODOTJS --headless --quit-after 300 --path . 2>&1 | bun tools/unmap.ts",
+    "typecheck": "tsc --noEmit",
+    "bun": "bun bun/entrypoint.ts",
+    "watch:sim": "bun --watch bun/entrypoint.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "source-map-js": "^1.2.2",
+    "typescript": "^5.9.0"
+  }
+}
