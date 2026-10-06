@@ -141,7 +141,7 @@ function missionPanel(before: GameState, after: GameState): string[] {
   for (const m of before.in_progress) beforeActive.set(m.id, m);
 
   const available: string[] = [];
-  for (const m of after.missions) {
+  for (const m of after.available) {
     available.push(`  ${ansi.bold}${m.name}${ansi.reset}`);
     available.push(`    need ${m.requiredSolders}  ${m.duration}h`);
   }

@@ -8,41 +8,31 @@ interface SoldierState {
 }
 type SoldierId = SoldierState["id"];
 
-function availableToActive(
-  m: Mission,
-  assigned_soldier_ids: SoldierId[]
-): ActiveMission {
-  return {
-    ...m,
-    remaining: m.duration,
-    assigned: assigned_soldier_ids,
-  };
-}
+
 type ActiveMission = {
+  _tag: "active";
   id: number;
   remaining: number;
   assigned: SoldierId[];
   name: string;
 };
 type CompletedMission = {
+  _tag: "completed";
   id: number;
   name: string;
 };
 
-const MISSION_STATUS = ["pending", "done", "available"] as const;
-type MissionStatus = (typeof MISSION_STATUS)[number];
-
-type Mission = {
+type AvailableMission = {
+  _tag: "available";
   id: number;
   duration: number;
   name: string;
   requiredSolders: number;
-  status: MissionStatus;
 };
 
 type GameState = {
+  available: AvailableMission[];
   day: number;
-  missions: Mission[];
   hour: number;
   roster: SoldierState[];
   in_progress: ActiveMission[];
@@ -57,16 +47,14 @@ type CompletedMissionEvent = {
 type HourElapsedEvent = { type: "HourElapsed" };
 type MissionAssignmentEvent = {
   type: "MissionAssignmentEvent";
-  mission_id: Mission["id"];
-  soldier_ids: SoldierState["id"][];
+  mission_id: AvailableMission["id"];
+  soldier_ids: SoldierId[];
 };
 type GameEvent =
   HourElapsedEvent | CompletedMissionEvent | MissionAssignmentEvent;
 
-export { MISSION_STATUS };
 export type {
-  Mission,
-  MissionStatus,
+  AvailableMission,
   GameState,
   GameEvent,
   HourElapsedEvent,
@@ -74,6 +62,6 @@ export type {
   ActiveMission,
   CompletedMission,
   CompletedMissionEvent,
+  SoldierId,
+  MissionAssignmentEvent,
 };
-
-export { availableToActive };
