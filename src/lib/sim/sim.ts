@@ -6,7 +6,14 @@ import {
   ActiveMission,
   CompletedMissionEvent,
 } from "./domain";
-import { availableToActive, finishMission } from "./transform";
+import {
+  availableToActive,
+  finishMission,
+  soldiersAlreadyDeployed,
+  soldiersNotReady,
+  tickMissions,
+  unknownSoldiers,
+} from "./transform";
 import { logTransition } from "./utils";
 type Store = {
   getState(): GameState;
@@ -105,12 +112,8 @@ class Sim {
       });
 
       return {
-        ...state,
+        ...tickMissions(state),
         ...time,
-        in_progress: state.in_progress.map((mission: ActiveMission) => ({
-          ...mission,
-          remaining: mission.remaining - 1,
-        })),
       };
     }
 
@@ -136,10 +139,26 @@ class Sim {
         head_count: mission.requiredSolders,
       };
 
-      // reasons for an assignment to fail
-      // TODO: reject ids not on roster (ghosts)
-      // TODO: reject soldiers who are not rest/fit
-      // TODO: reject soldiers already on an in_progress mission
+      const ghosts = unknownSoldiers(state, event.soldier_ids);
+      if (ghosts.length > 0) {
+        throw new Error(
+          `Unable to assign to mission with id: ${mission.id} - unknown soldiers: ${ghosts.join(", ")}`
+        );
+      }
+
+      const notReady = soldiersNotReady(state, event.soldier_ids);
+      if (notReady.length > 0) {
+        throw new Error(
+          `Unable to assign to mission with id: ${mission.id} - soldiers not rest/fit: ${notReady.join(", ")}`
+        );
+      }
+
+      const alreadyAssigned = soldiersAlreadyDeployed(state, event.soldier_ids);
+      if (alreadyAssigned.length > 0) {
+        throw new Error(
+          `Unable to assign to mission with id: ${mission.id} - soldiers already on a mission: ${alreadyAssigned.join(", ")}`
+        );
+      }
 
       if (event.soldier_ids.length < requirements.head_count) {
         throw new Error(

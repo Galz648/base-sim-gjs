@@ -64,4 +64,41 @@ function finishMission(state: GameState, activeMission: ActiveMission): GameStat
   return releaseSoldiers(ActiveToCompleted(state, activeMission), activeMission.assigned);
 }
 
-export { availableToActive, ActiveToCompleted, releaseSoldiers, finishMission };
+function tickMissions(state: GameState): GameState {
+  return {
+    ...state,
+    in_progress: state.in_progress.map((mission) => ({
+      ...mission,
+      remaining: mission.remaining - 1,
+    })),
+  };
+}
+
+function unknownSoldiers(state: GameState, soldierIds: SoldierId[]): SoldierId[] {
+  const rosterIds = new Set(state.roster.map((soldier) => soldier.id));
+  return soldierIds.filter((id) => !rosterIds.has(id));
+}
+
+function soldiersNotReady(state: GameState, soldierIds: SoldierId[]): SoldierId[] {
+  const rosterById = new Map(state.roster.map((soldier) => [soldier.id, soldier]));
+  return soldierIds.filter((id) => {
+    const soldier = rosterById.get(id);
+    return soldier !== undefined && (soldier.duty !== "rest" || soldier.condition !== "fit");
+  });
+}
+
+function soldiersAlreadyDeployed(state: GameState, soldierIds: SoldierId[]): SoldierId[] {
+  const deployed = new Set(state.in_progress.flatMap((active) => active.assigned));
+  return soldierIds.filter((id) => deployed.has(id));
+}
+
+export {
+  availableToActive,
+  ActiveToCompleted,
+  releaseSoldiers,
+  finishMission,
+  tickMissions,
+  unknownSoldiers,
+  soldiersNotReady,
+  soldiersAlreadyDeployed,
+};
