@@ -1,7 +1,11 @@
 {
   "name": "base-sim",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "source-map-js": "^1.2.2",
+    "typescript": "^5.9.0"
+  },
   "private": true,
-  "type": "module",
   "scripts": {
     "build": "bun tools/build.ts",
     "dev": "bun tools/dev.ts",
@@ -18,9 +22,8 @@
     "editor": "bun tools/godot.ts --editor --path .",
     "config": "bun tools/config.ts"
   },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "source-map-js": "^1.2.2",
-    "typescript": "^5.9.0"
+  "type": "module",
+  "dependencies": {
+    "effect": "^4.0.1"
   }
 }

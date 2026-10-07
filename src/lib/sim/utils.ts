@@ -209,3 +209,19 @@ export function logApply(state: GameState, event: GameEvent): void {
   ];
   console.log(zipColumns(left, missionPanel(state, state)));
 }
+
+type Result<T, E> = {
+  _tag: "success";
+  value: T;
+} | {
+  _tag: "failure";
+  error: E;
+};
+
+export function result<T, E>(value: T): Result<T, E> {
+  return { _tag: "success", value };
+}
+
+export function failure<T, E>(error: E): Result<T, E> {
+  return { _tag: "failure", error };
+}

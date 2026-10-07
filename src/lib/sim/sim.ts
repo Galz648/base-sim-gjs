@@ -1,10 +1,14 @@
+import { Effect, Match } from "effect";
 import { CONFIG } from "./config";
 import {
   GameState,
   GameEvent,
   HourElapsedEvent,
   ActiveMission,
+  AvailableMission,
   CompletedMissionEvent,
+  MissionAssignmentEvent,
+  SoldierId,
 } from "./domain";
 import {
   availableToActive,
@@ -15,6 +19,7 @@ import {
   unknownSoldiers,
 } from "./transform";
 import { logTransition } from "./utils";
+
 type Store = {
   getState(): GameState;
   state: GameState;
@@ -24,6 +29,168 @@ type Store = {
 };
 
 type Time = { hour: number; day: number };
+
+type MissionNotFound = {
+  readonly _tag: "MissionNotFound";
+  readonly missionId: number;
+};
+
+type UnknownSoldiers = {
+  readonly _tag: "UnknownSoldiers";
+  readonly missionId: number;
+  readonly soldierIds: readonly SoldierId[];
+};
+
+type SoldiersNotReady = {
+  readonly _tag: "SoldiersNotReady";
+  readonly missionId: number;
+  readonly soldierIds: readonly SoldierId[];
+};
+
+type SoldiersAlreadyDeployed = {
+  readonly _tag: "SoldiersAlreadyDeployed";
+  readonly missionId: number;
+  readonly soldierIds: readonly SoldierId[];
+};
+
+type InsufficientHeadcount = {
+  readonly _tag: "InsufficientHeadcount";
+  readonly missionId: number;
+  readonly expected: number;
+  readonly got: number;
+};
+
+type StepError =
+  | MissionNotFound
+  | UnknownSoldiers
+  | SoldiersNotReady
+  | SoldiersAlreadyDeployed
+  | InsufficientHeadcount;
+
+const findAvailableMission = (
+  state: GameState,
+  missionId: number,
+): Effect.Effect<AvailableMission, MissionNotFound> => {
+  const mission = state.available.find((m) => m.id === missionId);
+  return mission
+    ? Effect.succeed(mission)
+    : Effect.fail({ _tag: "MissionNotFound", missionId });
+};
+
+const findActiveMission = (
+  state: GameState,
+  missionId: number,
+): Effect.Effect<ActiveMission, MissionNotFound> => {
+  const mission = state.in_progress.find((m) => m.id === missionId);
+  return mission
+    ? Effect.succeed(mission)
+    : Effect.fail({ _tag: "MissionNotFound", missionId });
+};
+
+const checkKnownSoldiers = (
+  state: GameState,
+  mission: AvailableMission,
+  soldierIds: SoldierId[],
+): Effect.Effect<AvailableMission, UnknownSoldiers> => {
+  const ghosts = unknownSoldiers(state, soldierIds);
+  return ghosts.length === 0
+    ? Effect.succeed(mission)
+    : Effect.fail({ _tag: "UnknownSoldiers", missionId: mission.id, soldierIds: ghosts });
+};
+
+const checkSoldiersReady = (
+  state: GameState,
+  mission: AvailableMission,
+  soldierIds: SoldierId[],
+): Effect.Effect<AvailableMission, SoldiersNotReady> => {
+  const notReady = soldiersNotReady(state, soldierIds);
+  return notReady.length === 0
+    ? Effect.succeed(mission)
+    : Effect.fail({ _tag: "SoldiersNotReady", missionId: mission.id, soldierIds: notReady });
+};
+
+const checkNotDeployed = (
+  state: GameState,
+  mission: AvailableMission,
+  soldierIds: SoldierId[],
+): Effect.Effect<AvailableMission, SoldiersAlreadyDeployed> => {
+  const alreadyAssigned = soldiersAlreadyDeployed(state, soldierIds);
+  return alreadyAssigned.length === 0
+    ? Effect.succeed(mission)
+    : Effect.fail({
+        _tag: "SoldiersAlreadyDeployed",
+        missionId: mission.id,
+        soldierIds: alreadyAssigned,
+      });
+};
+
+const checkHeadcount = (
+  mission: AvailableMission,
+  soldierIds: SoldierId[],
+  rosterSize: number,
+): Effect.Effect<AvailableMission, InsufficientHeadcount> =>
+  soldierIds.length < mission.requiredSolders
+    ? Effect.fail({
+        _tag: "InsufficientHeadcount",
+        missionId: mission.id,
+        expected: mission.requiredSolders,
+        got: rosterSize,
+      })
+    : Effect.succeed(mission);
+
+const assignSoldiers = (
+  state: GameState,
+  event: MissionAssignmentEvent,
+): Effect.Effect<GameState, StepError> =>
+  Effect.flatMap(findAvailableMission(state, event.mission_id), (mission) =>
+    Effect.flatMap(checkKnownSoldiers(state, mission, event.soldier_ids), (known) =>
+      Effect.flatMap(checkSoldiersReady(state, known, event.soldier_ids), (ready) =>
+        Effect.flatMap(checkNotDeployed(state, ready, event.soldier_ids), (free) =>
+          Effect.flatMap(checkHeadcount(free, event.soldier_ids, state.roster.length), (cleared) =>
+            Effect.succeed(availableToActive(state, cleared, event.soldier_ids)),
+          ),
+        ),
+      ),
+    ),
+  );
+
+// TODO: handle injury on return — duty goes to rest even if condition changes
+const completeMission = (
+  state: GameState,
+  event: CompletedMissionEvent,
+): Effect.Effect<GameState, MissionNotFound> =>
+  Effect.flatMap(findActiveMission(state, event.mission_id), (mission) =>
+    Effect.succeed(finishMission(state, mission)),
+  );
+
+const reportStepError = (error: StepError): void => {
+  Match.value(error).pipe(
+    Match.tag("MissionNotFound", (e) => {
+      console.log(`Mission with id ${e.missionId} not found.`);
+    }),
+    Match.tag("UnknownSoldiers", (e) => {
+      console.log(
+        `Unable to assign to mission with id: ${e.missionId} - unknown soldiers: ${e.soldierIds.join(", ")}`,
+      );
+    }),
+    Match.tag("SoldiersNotReady", (e) => {
+      console.log(
+        `Unable to assign to mission with id: ${e.missionId} - soldiers not rest/fit: ${e.soldierIds.join(", ")}`,
+      );
+    }),
+    Match.tag("SoldiersAlreadyDeployed", (e) => {
+      console.log(
+        `Unable to assign to mission with id: ${e.missionId} - soldiers already on a mission: ${e.soldierIds.join(", ")}`,
+      );
+    }),
+    Match.tag("InsufficientHeadcount", (e) => {
+      console.log(
+        `Unable to assign to mission with id: ${e.missionId} - not enough headcount. \n\t expected: ${e.expected}, got: \n ${e.got}`,
+      );
+    }),
+    Match.exhaustive,
+  );
+};
 
 class Sim {
   store: Store;
@@ -76,7 +243,19 @@ class Sim {
       events: [],
       dispatch: (event: GameEvent): void => {
         // this.store.events.push_front(event)
-        this.store.state = this.apply(this.store.state, event);
+        const state = this.store.state;
+        const next = Effect.runSync(
+          Effect.match(this.apply(state, event), {
+            onFailure: (error) => {
+              reportStepError(error);
+              return state;
+            },
+            onSuccess: (updated) => updated,
+          }),
+        );
+        // TODO: This will not work under godot probably - move this somewhere else, possibly entrypoint.ts
+        logTransition(state, event, next);
+        this.store.state = next;
       },
       subscribe: function (cb: () => void): void {
         cb();
@@ -106,80 +285,34 @@ class Sim {
     };
   }
 
-  apply(state: GameState, event: GameEvent): GameState {
+  apply(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
     // Pure function
-    const next = this.step(state, event);
-    logTransition(state, event, next); // TODO: This will not work under godot probably - move this somewhere else, possibly entrypoint.ts
-    return next;
+    return this.step(state, event);
   }
 
-  private step(state: GameState, event: GameEvent): GameState {
+  private step(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
     if (event.type === "HourElapsed") {
       const time = this.incrementTime({
         day: state.day,
         hour: state.hour,
       });
 
-      return {
+      return Effect.succeed({
         ...tickMissions(state),
         ...time,
-      };
+      });
     }
 
     if (event.type === "MissionCompleted") {
-      const mission = state.in_progress.find((m) => m.id === event.mission_id);
-
-      if (!mission) {
-        throw new Error(`Mission with id ${event.mission_id} not found.`); // TODO: handle this differently, pure function should not cause side effects
-      }
-
-      // TODO: handle injury on return — duty goes to rest even if condition changes
-      return finishMission(state, mission);
+      return completeMission(state, event);
     }
 
     if (event.type === "MissionAssignmentEvent") {
-      const mission = state.available.find((m) => m.id === event.mission_id);
-
-      if (!mission) {
-        throw new Error(`Mission with id ${event.mission_id} not found.`); // TODO: handle differently, pure function should not cause side effects
-      }
-
-      const requirements = {
-        head_count: mission.requiredSolders,
-      };
-
-      const ghosts = unknownSoldiers(state, event.soldier_ids);
-      if (ghosts.length > 0) {
-        throw new Error(
-          `Unable to assign to mission with id: ${mission.id} - unknown soldiers: ${ghosts.join(", ")}`
-        );
-      }
-
-      const notReady = soldiersNotReady(state, event.soldier_ids);
-      if (notReady.length > 0) {
-        throw new Error(
-          `Unable to assign to mission with id: ${mission.id} - soldiers not rest/fit: ${notReady.join(", ")}`
-        );
-      }
-
-      const alreadyAssigned = soldiersAlreadyDeployed(state, event.soldier_ids);
-      if (alreadyAssigned.length > 0) {
-        throw new Error(
-          `Unable to assign to mission with id: ${mission.id} - soldiers already on a mission: ${alreadyAssigned.join(", ")}`
-        );
-      }
-
-      if (event.soldier_ids.length < requirements.head_count) {
-        throw new Error(
-          `Unable to assign to mission with id: ${mission.id} - not enough headcount. \n\t expected: ${requirements.head_count}, got: \n ${state.roster.length}`
-        );
-      }
-
-      return availableToActive(state, mission, event.soldier_ids);
+      return assignSoldiers(state, event);
     }
 
     const _exhaustive: never = event;
-    return state;
+    return _exhaustive;
   }
 
   start(tickMs: number = CONFIG.TICK_DURATION): void {
@@ -201,10 +334,10 @@ class Sim {
             mission_id: mission.id,
             name: mission.name,
           };
-        }
+        },
       );
       completed_missions_events.forEach((e: CompletedMissionEvent) =>
-        this.store.dispatch(e)
+        this.store.dispatch(e),
       );
     }, tickMs);
   }
