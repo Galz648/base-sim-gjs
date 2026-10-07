@@ -1,4 +1,5 @@
-interface SoldierState {
+interface AliveSoldierState {
+  _tag: "soldier/alive";
   id: number;
   name: string;
   health: number;
@@ -6,24 +7,29 @@ interface SoldierState {
   duty: "active" | "rest";
   condition: "fit" | "injured";
 }
-type SoldierId = SoldierState["id"];
-
+interface DeadSoldierState {
+  _tag: "soldier/dead";
+  id: number;
+  name: string;
+}
+type SoldierId = AliveSoldierState["id"] | DeadSoldierState["id"];
+type SoldierState = AliveSoldierState | DeadSoldierState;
 
 type ActiveMission = {
-  _tag: "active";
+  _tag: "mission/active";
   id: number;
   remaining: number;
   assigned: SoldierId[];
   name: string;
 };
 type CompletedMission = {
-  _tag: "completed";
+  _tag: "mission/completed";
   id: number;
   name: string;
 };
 
 type AvailableMission = {
-  _tag: "available";
+  _tag: "mission/available";
   id: number;
   duration: number;
   name: string;
@@ -34,7 +40,7 @@ type GameState = {
   available: AvailableMission[];
   day: number;
   hour: number;
-  roster: SoldierState[];
+  roster: AliveSoldierState[];
   in_progress: ActiveMission[];
   completed: CompletedMission[];
 };
@@ -58,10 +64,11 @@ export type {
   GameState,
   GameEvent,
   HourElapsedEvent,
-  SoldierState,
+  AliveSoldierState,
+  DeadSoldierState,
+  SoldierId,
   ActiveMission,
   CompletedMission,
   CompletedMissionEvent,
-  SoldierId,
   MissionAssignmentEvent,
 };

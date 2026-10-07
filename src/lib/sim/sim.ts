@@ -33,6 +33,7 @@ class Sim {
       state: {
         roster: [
           {
+            _tag: "soldier/alive",
             id: 2,
             name: "Gal",
             health: 100,
@@ -41,11 +42,12 @@ class Sim {
             condition: "fit",
           },
           {
+            _tag: "soldier/alive",
             id: 1,
             name: "Nir",
             health: 100,
             stamina: 100,
-            duty: "rest",
+            duty: "active",
             condition: "fit",
           },
         ],
@@ -56,11 +58,18 @@ class Sim {
             duration: 6,
             name: "Recon Patrol",
             requiredSolders: 1,
-            _tag: "available",
+            _tag: "mission/available",
           },
         ],
         hour: 1,
         in_progress: [
+          {
+            id: 1,
+            remaining: 6,
+            assigned: [1],
+            name: "Supply Run",
+            _tag: "mission/active",
+          },
         ],
         completed: [],
       },

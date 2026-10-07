@@ -2,15 +2,15 @@ import {
   ActiveMission,
   AvailableMission,
   CompletedMission,
+  AliveSoldierState,
   GameState,
   SoldierId,
-  SoldierState,
 } from "./domain";
 
 function setDuty(
   state: GameState,
   soldierIds: SoldierId[],
-  duty: SoldierState["duty"],
+  duty: AliveSoldierState["duty"],
 ): GameState {
   return {
     ...state,
@@ -26,7 +26,7 @@ function availableToActive(
   assignedSoldierIds: SoldierId[],
 ): GameState {
   const active: ActiveMission = {
-    _tag: "active",
+    _tag: "mission/active",
     id: availableMission.id,
     name: availableMission.name,
     remaining: availableMission.duration,
@@ -47,7 +47,7 @@ function ActiveToCompleted(
   const completed: CompletedMission = {
     id: activeMission.id,
     name: activeMission.name,
-    _tag: "completed",
+    _tag: "mission/completed",
   };
   return {
     ...state,

@@ -1,4 +1,4 @@
-import { ActiveMission, GameEvent, GameState, SoldierState } from "./domain";
+import { ActiveMission, AliveSoldierState, GameEvent, GameState } from "./domain";
 
 // ANSI colors only when printing to a real terminal (Bun). Godot's Output panel prints the escape
 // codes raw (and GodotJS has no `process`), so inside Godot the board is plain text.
@@ -16,12 +16,12 @@ const ansi = {
   red: esc("31"),
 };
 
-const dutyAnsi: Record<SoldierState["duty"], string> = {
+const dutyAnsi: Record<AliveSoldierState["duty"], string> = {
   active: ansi.green,
   rest: ansi.yellow,
 };
 
-const conditionAnsi: Record<SoldierState["condition"], string> = {
+const conditionAnsi: Record<AliveSoldierState["condition"], string> = {
   fit: ansi.green,
   injured: ansi.red,
 };
@@ -43,25 +43,25 @@ function showNum(label: string, before: number, after: number): string {
   return `${label} ${paintNum(before)} ${arrow} ${paintNum(after)}`;
 }
 
-function paintDuty(duty: SoldierState["duty"]): string {
+function paintDuty(duty: AliveSoldierState["duty"]): string {
   return `${dutyAnsi[duty]}${ansi.bold}${duty.padEnd(6)}${ansi.reset}`;
 }
 
 function showDuty(
-  before: SoldierState["duty"],
-  after: SoldierState["duty"]
+  before: AliveSoldierState["duty"],
+  after: AliveSoldierState["duty"]
 ): string {
   if (before === after) return paintDuty(after);
   return `${paintDuty(before)} ${arrow} ${paintDuty(after)}`;
 }
 
-function paintCondition(condition: SoldierState["condition"]): string {
+function paintCondition(condition: AliveSoldierState["condition"]): string {
   return `${conditionAnsi[condition]}${condition}${ansi.reset}`;
 }
 
 function showCondition(
-  before: SoldierState["condition"],
-  after: SoldierState["condition"]
+  before: AliveSoldierState["condition"],
+  after: AliveSoldierState["condition"]
 ): string {
   if (before === after) return paintCondition(after);
   return `${paintCondition(before)} ${arrow} ${paintCondition(after)}`;
@@ -80,7 +80,7 @@ function showClock(before: GameState, after: GameState): string {
 }
 
 function rosterTransition(before: GameState, after: GameState): string {
-  const afterById = new Map<number, SoldierState>();
+  const afterById = new Map<number, AliveSoldierState>();
   for (const s of after.roster) afterById.set(s.id, s);
   const seen = new Set<number>();
   const lines: string[] = [];
@@ -115,7 +115,7 @@ function padVisible(s: string, width: number): string {
   return s + " ".repeat(width - n);
 }
 
-function crewNames(ids: number[], roster: SoldierState[]): string {
+function crewNames(ids: number[], roster: AliveSoldierState[]): string {
   if (ids.length === 0) return "—";
   const byId = new Map<number, string>();
   for (const s of roster) byId.set(s.id, s.name);
