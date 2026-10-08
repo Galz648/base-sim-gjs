@@ -28,7 +28,6 @@ type CompletedMission = {
   id: number;
   name: string;
 };
-
 type AvailableMission = {
   _tag: "mission/available";
   id: number;
@@ -64,11 +63,9 @@ type Action  =
   { _tag: "action/tick"; type: "Tick"; hours: number }
 | { _tag: "action/assign"; type: "Assign"; missionId: string; soldierIds: string[] };
 
-type Outcome = 
+type Outcome =  // Expected game outcome
   { _tag: "outcome/mission-available"; type: "MissionAvailable"; missionId: string }
 | { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: string; soldierIds: string[] }
-| { _tag: "outcome/assign-rejected"; type: "AssignRejected"; reason: string };
-        
 
 
 type ScheduledMission = {

@@ -24,6 +24,8 @@ import {
   unknownSoldiers,
 } from "./transform";
 import { Store } from "./store";
+import { SoldiersNotReady, SoldiersAlreadyDeployed, InsufficientHeadcount } from "./assignment";
+import { MissionNotFound, UnknownSoldiers } from "./error";
 
 
 type StepResult = { outcomes: Outcome[], state: GameState } // TODO: change name `Result` - not the result type !
@@ -50,7 +52,7 @@ function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { /
 }
 
 
-function apply(state: GameState, action: Action): Effect.Effect<StepResult, StepError> {
+function apply(state: GameState, action: Action): Effect.Effect<StepResult, never> {
   if (action.type === "Tick") {
     const time = incrementTime({
       day: state.day,
@@ -84,42 +86,13 @@ function incrementTime(time: Time): Time {
     day,
   };
 }
-type MissionNotFound = {
-  readonly _tag: "MissionNotFound";
-  readonly missionId: number;
-};
 
-type UnknownSoldiers = {
-  readonly _tag: "UnknownSoldiers";
-  readonly missionId: number;
-  readonly soldierIds: readonly SoldierId[];
-};
 
-type SoldiersNotReady = {
-  readonly _tag: "SoldiersNotReady";
-  readonly missionId: number;
-  readonly soldierIds: readonly SoldierId[];
-};
-
-type SoldiersAlreadyDeployed = {
-  readonly _tag: "SoldiersAlreadyDeployed";
-  readonly missionId: number;
-  readonly soldierIds: readonly SoldierId[];
-};
-
-type InsufficientHeadcount = {
-  readonly _tag: "InsufficientHeadcount";
-  readonly missionId: number;
-  readonly expected: number;
-  readonly got: number;
-};
 
 type StepError =
   | MissionNotFound
   | UnknownSoldiers
-  | SoldiersNotReady
-  | SoldiersAlreadyDeployed
-  | InsufficientHeadcount;
+
 
 const findAvailableMission = (
   state: GameState,
@@ -128,7 +101,7 @@ const findAvailableMission = (
   const mission = state.available.find((m) => m.id === missionId);
   return mission
     ? Effect.succeed(mission)
-    : Effect.fail({ _tag: "MissionNotFound", missionId });
+    : Effect.fail({ _tag: "Error/MissionNotFound", missionId });
 };
 
 const findActiveMission = (
@@ -138,7 +111,7 @@ const findActiveMission = (
   const mission = state.in_progress.find((m) => m.id === missionId);
   return mission
     ? Effect.succeed(mission)
-    : Effect.fail({ _tag: "MissionNotFound", missionId });
+    : Effect.fail({ _tag: "Error/MissionNotFound", missionId });
 };
 
 const checkKnownSoldiers = (
@@ -149,7 +122,7 @@ const checkKnownSoldiers = (
   const ghosts = unknownSoldiers(state, soldierIds);
   return ghosts.length === 0
     ? Effect.succeed(mission)
-    : Effect.fail({ _tag: "UnknownSoldiers", missionId: mission.id, soldierIds: ghosts });
+    : Effect.fail({ _tag: "Error/UnknownSoldiers", missionId: mission.id, soldierIds: ghosts });
 };
 
 const checkSoldiersReady = (
@@ -192,21 +165,20 @@ const checkHeadcount = (
     })
     : Effect.succeed(mission);
 
-const assignSoldiers = (
-  state: GameState,
-  event: MissionAssignmentEvent,
-): Effect.Effect<GameState, StepError> =>
-  Effect.flatMap(findAvailableMission(state, event.mission_id), (mission) =>
-    Effect.flatMap(checkKnownSoldiers(state, mission, event.soldier_ids), (known) =>
-      Effect.flatMap(checkSoldiersReady(state, known, event.soldier_ids), (ready) =>
-        Effect.flatMap(checkNotDeployed(state, ready, event.soldier_ids), (free) =>
-          Effect.flatMap(checkHeadcount(free, event.soldier_ids, state.roster.length), (cleared) =>
-            Effect.succeed(availableToActive(state, cleared, event.soldier_ids)),
-          ),
-        ),
-      ),
-    ),
-  );
+// const assignSoldiers = (
+//   state: GameState,
+//   event: MissionAssignmentEvent,
+// ): Effect.Effect<StepResult, StepError> =>
+//   Effect.flatMap(findAvailableMission(state, event.mission_id), (mission) =>
+//     Effect.flatMap(checkKnownSoldiers(state, mission, event.soldier_ids), (known) =>
+//       // Effect.flatMap(checkSoldiersReady(state, known, event.soldier_ids), (ready) =>
+//         // Effect.flatMap(checkNotDeployed(state, ready, event.soldier_ids), (free) =>
+//           Effect.flatMap(checkHeadcount(free, event.soldier_ids, state.roster.length), (cleared) =>
+//             Effect.succeed(availableToActive(state, cleared, event.soldier_ids)),
+//           ),
+//         ),
+//       ),
+  
 
 // TODO: handle injury on return — duty goes to rest even if condition changes
 const completeMission = (
@@ -219,29 +191,29 @@ const completeMission = (
 
 export const reportStepError = (error: StepError): void => {
   Match.value(error).pipe(
-    Match.tag("MissionNotFound", (e) => {
+    Match.tag("Error/MissionNotFound", (e) => {
       console.log(`Mission with id ${e.missionId} not found.`);
     }),
-    Match.tag("UnknownSoldiers", (e) => {
+    Match.tag("Error/UnknownSoldiers", (e) => {
       console.log(
         `Unable to assign to mission with id: ${e.missionId} - unknown soldiers: ${e.soldierIds.join(", ")}`,
       );
     }),
-    Match.tag("SoldiersNotReady", (e) => {
-      console.log(
-        `Unable to assign to mission with id: ${e.missionId} - soldiers not rest/fit: ${e.soldierIds.join(", ")}`,
-      );
-    }),
-    Match.tag("SoldiersAlreadyDeployed", (e) => {
-      console.log(
-        `Unable to assign to mission with id: ${e.missionId} - soldiers already on a mission: ${e.soldierIds.join(", ")}`,
-      );
-    }),
-    Match.tag("InsufficientHeadcount", (e) => {
-      console.log(
-        `Unable to assign to mission with id: ${e.missionId} - not enough headcount. \n\t expected: ${e.expected}, got: \n ${e.got}`,
-      );
-    }),
+    // Match.tag("SoldiersNotReady", (e) => {
+    //   console.log(
+    //     `Unable to assign to mission with id: ${e.missionId} - soldiers not rest/fit: ${e.soldierIds.join(", ")}`,
+    //   );
+    // }),
+    // Match.tag("SoldiersAlreadyDeployed", (e) => {
+    //   console.log(
+    //     `Unable to assign to mission with id: ${e.missionId} - soldiers already on a mission: ${e.soldierIds.join(", ")}`,
+    //   );
+    // }),
+    // Match.tag("InsufficientHeadcount", (e) => {
+    //   console.log(
+    //     `Unable to assign to mission with id: ${e.missionId} - not enough headcount. \n\t expected: ${e.expected}, got: \n ${e.got}`,
+    //   );
+    // }),
     Match.exhaustive,
   );
 };
