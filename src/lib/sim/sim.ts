@@ -9,6 +9,9 @@ import {
   CompletedMissionEvent,
   MissionAssignmentEvent,
   SoldierId,
+  Time,
+  ScheduledMission,
+  ScheduledMissionEvent,
 } from "./domain";
 import {
   availableToActive,
@@ -21,6 +24,7 @@ import {
 import { logTransition } from "./utils";
 
 type Store = {
+  getTime(): Time;
   getState(): GameState;
   state: GameState;
   events: GameEvent[];
@@ -28,7 +32,7 @@ type Store = {
   subscribe(cb: () => void): void;
 };
 
-type Time = { hour: number; day: number };
+
 
 type MissionNotFound = {
   readonly _tag: "MissionNotFound";
@@ -118,10 +122,10 @@ const checkNotDeployed = (
   return alreadyAssigned.length === 0
     ? Effect.succeed(mission)
     : Effect.fail({
-        _tag: "SoldiersAlreadyDeployed",
-        missionId: mission.id,
-        soldierIds: alreadyAssigned,
-      });
+      _tag: "SoldiersAlreadyDeployed",
+      missionId: mission.id,
+      soldierIds: alreadyAssigned,
+    });
 };
 
 const checkHeadcount = (
@@ -131,11 +135,11 @@ const checkHeadcount = (
 ): Effect.Effect<AvailableMission, InsufficientHeadcount> =>
   soldierIds.length < mission.requiredSolders
     ? Effect.fail({
-        _tag: "InsufficientHeadcount",
-        missionId: mission.id,
-        expected: mission.requiredSolders,
-        got: rosterSize,
-      })
+      _tag: "InsufficientHeadcount",
+      missionId: mission.id,
+      expected: mission.requiredSolders,
+      got: rosterSize,
+    })
     : Effect.succeed(mission);
 
 const assignSoldiers = (
@@ -239,6 +243,17 @@ class Sim {
           },
         ],
         completed: [],
+        scheduled: [{
+          id: 3,
+          name: "Break",
+          startsAt: {
+            hour: 1,
+            day: 1
+          },
+          duration: 2,
+          _tag: "mission/scheduled",
+          requiredSolders: 0
+        }]
       },
       events: [],
       dispatch: (event: GameEvent): void => {
@@ -251,7 +266,7 @@ class Sim {
               return state;
             },
             onSuccess: (updated) => updated,
-          }),
+          })
         );
         // TODO: This will not work under godot probably - move this somewhere else, possibly entrypoint.ts
         logTransition(state, event, next);
@@ -263,6 +278,12 @@ class Sim {
       getState: function (): GameState {
         return this.state;
       },
+      getTime: function (): Time {
+        return {
+          hour: this.getState().hour,
+          day: this.getState().day
+        }
+      }
     };
   }
 
@@ -311,6 +332,9 @@ class Sim {
       return assignSoldiers(state, event);
     }
 
+    if (event.type === "ScheduledMissionEvent") {
+      return makeMissionAvailable(state, event.mission)
+    }
     const _exhaustive: never = event;
     return _exhaustive;
   }
@@ -319,6 +343,23 @@ class Sim {
     // TODO: this should be runtime agnostic, so it fits in GODOT (so no SetInterval, should probably be wrapped in some Timer construct, to mimic Godot roughly)
     setInterval(() => {
       //TODO: choose if the tick should happen before the other events
+      function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { //TODO: change name
+        return scheduled.filter((m) => {
+          return (m.startsAt.day <= t.day && m.startsAt.hour <= t.hour)
+        })
+      }
+      const scheduled = this.store.getState().scheduled
+      const time = this.store.getTime()
+      // const scheduled_events = isAvailable(scheduled, time) 
+
+      isReady(scheduled, time).forEach((mission) => {
+        this.store.dispatch(
+          {
+            type: "ScheduledMissionEvent",
+            mission
+          }
+        )
+      })
       const event = this.tick();
       this.store.dispatch(event);
     }, tickMs);
@@ -344,3 +385,26 @@ class Sim {
 }
 
 export { Sim };
+
+
+function makeMissionAvailable(state: GameState, mission: ScheduledMission): Effect.Effect<GameState, StepError, never> {
+  // TODO: validate it's actually time to make it available
+  // move from scheduled to available
+  const scheduled = state.scheduled.filter((item) => {
+    item.id !== mission.id
+  })
+  const available: AvailableMission[] = [...state.available, ScheduledToAvailable(mission)]
+
+  return Effect.succeed({...state, scheduled, available})
+}
+
+
+function ScheduledToAvailable(mission: ScheduledMission): AvailableMission {
+  return {
+    _tag: "mission/available",
+    id: mission.id,
+    duration: mission.duration,
+    name: mission.name,
+    requiredSolders: mission.requiredSolders
+  }
+}

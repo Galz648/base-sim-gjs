@@ -1,3 +1,4 @@
+type Time = { hour: number; day: number };
 interface AliveSoldierState {
   _tag: "soldier/alive";
   id: number;
@@ -37,6 +38,7 @@ type AvailableMission = {
 };
 
 type GameState = {
+  scheduled: ScheduledMission[];
   available: AvailableMission[];
   day: number;
   hour: number;
@@ -56,8 +58,21 @@ type MissionAssignmentEvent = {
   mission_id: AvailableMission["id"];
   soldier_ids: SoldierId[];
 };
+
+type ScheduledMission = {
+  _tag: "mission/scheduled"
+  id: number,
+  name: string,
+  startsAt: Time,
+  duration: number,
+  requiredSolders: number,
+}
+type ScheduledMissionEvent = {
+  type: "ScheduledMissionEvent"
+  mission: ScheduledMission
+}
 type GameEvent =
-  HourElapsedEvent | CompletedMissionEvent | MissionAssignmentEvent;
+  HourElapsedEvent | CompletedMissionEvent | MissionAssignmentEvent | ScheduledMissionEvent
 
 export type {
   AvailableMission,
@@ -71,4 +86,7 @@ export type {
   CompletedMission,
   CompletedMissionEvent,
   MissionAssignmentEvent,
+  Time,
+  ScheduledMission,
+  ScheduledMissionEvent
 };
