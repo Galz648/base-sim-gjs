@@ -1,8 +1,8 @@
 import { float64, Node } from "godot";
 import { gd } from "../lib/gd";
 import { devState } from "../lib/dev-state";
-import { Sim, Store } from "../lib/sim/sim";
-import { initializeStore } from "../lib/sim/store";
+import { Sim} from "../lib/sim/sim";
+import { Store } from "../lib/sim/store";
 import { GameState } from "../lib/sim/domain";
 
 // The sim is plain TypeScript and runs the same under Bun (`bun run bun`) and here, inside Godot.
@@ -66,7 +66,7 @@ export default class SimNode extends Node {
   // Milliseconds per in-game hour. An int (no decimal point in the literal): edit it in the Inspector on the Main node.
   @gd.export()
   accessor tick_ms: number = 1000;
-  store: Store = initializeStore(initial_state)
+  store: Store = new Store(initial_state)
   sim: Sim = new Sim(this.store)
   _ready(): void {
     // Dev-only (a no-op unless `bun run dev` sets GODOTJS_DEV_STATE): keep the whole game state across relaunches.

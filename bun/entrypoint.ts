@@ -1,7 +1,7 @@
 // Bun-side runner: the same sim, no Godot. `bun run bun` (or `bun run watch:sim`).
 import { GameState } from "../src/lib/sim/domain";
 import { Sim } from "../src/lib/sim/sim";
-import { initializeStore } from "../src/lib/sim/store";
+import { Store} from "../src/lib/sim/store";
 
 (() => {
   const initial_state: GameState = {
@@ -47,20 +47,20 @@ import { initializeStore } from "../src/lib/sim/store";
     ],
     completed: [],
     scheduled: [
-    //   {
-    //   id: 3,
-    //   name: "Bathroom Cleaning",
-    //   startsAt: {
-    //     hour: 1,
-    //     day: 1
-    //   },
-    //   duration: 2,
-    //   _tag: "mission/scheduled",
-    //   requiredSolders: 1
-    // }
+      {
+      id: 3,
+      name: "Bathroom Cleaning",
+      startsAt: {
+        hour: 2,
+        day: 1
+      },
+      duration: 2,
+      _tag: "mission/scheduled",
+      requiredSolders: 1
+    }
   ]
   }
   
-  const sim = new Sim(initializeStore(initial_state));
+  const sim = new Sim(new Store(initial_state));
   sim.start();
 })();
