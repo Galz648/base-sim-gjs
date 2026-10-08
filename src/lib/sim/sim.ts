@@ -12,6 +12,8 @@ import {
   Time,
   ScheduledMission,
   ScheduledMissionEvent,
+  Outcome,
+  Action,
 } from "./domain";
 import {
   availableToActive,
@@ -23,6 +25,8 @@ import {
 } from "./transform";
 import { Store } from "./store";
 
+
+type StepResult = { outcomes: Outcome[], state: GameState } // TODO: change name `Result` - not the result type !
 function getCompletedMissions(state: GameState): CompletedMissionEvent[]{
   const freshly_completed = 
   state.in_progress.filter((active: ActiveMission) => active.remaining === 0);
@@ -45,36 +49,27 @@ function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { /
   })
 }
 
-function apply(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
-  // Pure function
-  return step(state, event);
-}
 
-function step(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
-  if (event.type === "HourElapsed") {
+function apply(state: GameState, action: Action): Effect.Effect<StepResult, StepError> {
+  if (action.type === "Tick") {
     const time = incrementTime({
       day: state.day,
       hour: state.hour,
     });
 
-    return Effect.succeed({
-      ...tickMissions(state),
-      ...time,
-    });
+    // return Effect.succeed({
+    //   // ...tickMissions(state),
+    //   // ...time,
+    // });
+    void time;
+    return Effect.succeed(onTick(state, action.hours));
   }
 
-  if (event.type === "MissionCompleted") {
-    return completeMission(state, event);
+  if (action.type === "Assign") {
+    return Effect.succeed({ outcomes: [], state });
   }
 
-  if (event.type === "MissionAssignmentEvent") {
-    return assignSoldiers(state, event);
-  }
-
-  if (event.type === "ScheduledMissionEvent") {
-    return makeMissionAvailable(state, event.mission)
-  }
-  const _exhaustive: never = event;
+  const _exhaustive: never = action;
   return _exhaustive;
 }
 
@@ -250,7 +245,13 @@ export const reportStepError = (error: StepError): void => {
     Match.exhaustive,
   );
 };
-
+function onTick(s: GameState, hours: number) {
+  const out: Outcome[] = [];
+  // s = advanceClock(s, hours);
+  // s = completeFinishedMissions(s, out);  // marks done + releases soldiers
+  // s = openScheduledMissions(s, out);
+  return { state: s, outcomes: out };
+}
 class Sim {
   store: Store;
 
@@ -266,29 +267,7 @@ class Sim {
   start(tickMs: number = CONFIG.TICK_DURATION): void {
     //TODO: choose if the tick should happen before the other events
     setInterval(() => {
-
-      const scheduled = this.store.getState().scheduled
-      const time = this.store.getTime()
-
-      isReady(scheduled, time).forEach((mission) => {
-        this.store.dispatch(
-          {
-            _tag: "event/schedule-mission",
-            type: "ScheduledMissionEvent",
-            mission
-          }
-        )
-      })
-
-      
-      getCompletedMissions(this.store.getState()).forEach((e: CompletedMissionEvent) =>
-        this.store.dispatch(e),
-      );
-
-      this.store.dispatch({
-        _tag: "event/hour-elapsed",
-        type: "HourElapsed"
-      });
+      onTick(this.store.getState(), 1)
     }, tickMs);
 
   }
@@ -296,27 +275,6 @@ class Sim {
 
 
 
-function makeMissionAvailable(state: GameState, mission: ScheduledMission): Effect.Effect<GameState, StepError, never> {
-  // TODO: validate it's actually time to make it available
-  // move from scheduled to available
-  const scheduled = state.scheduled.filter((item) => {
-    item.id !== mission.id
-  })
-  const available: AvailableMission[] = [...state.available, ScheduledToAvailable(mission)]
-
-  return Effect.succeed({ ...state, scheduled, available })
-}
 
 
-function ScheduledToAvailable(mission: ScheduledMission): AvailableMission {
-  return {
-    _tag: "mission/available",
-    id: mission.id,
-    duration: mission.duration,
-    name: mission.name,
-    requiredSolders: mission.requiredSolders
-  }
-}
-
-
-export { Sim, type Store, apply}
+export { Sim, type Store, apply, StepError}

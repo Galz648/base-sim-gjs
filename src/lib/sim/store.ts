@@ -1,10 +1,11 @@
 import { Effect } from "effect";
-import { GameState, GameEvent, Time } from "./domain";
+import { GameState, GameEvent, Time, Outcome, Action } from "./domain";
 import { logTransition } from "./utils";
 import { apply, reportStepError } from "./sim";
 
 
-type Listener = () => void
+type Listener = (state:GameState, outcomes: Outcome[]) => void;
+
 
 export class Store {
   state: GameState
@@ -15,16 +16,16 @@ export class Store {
     this.state = initial
   }
 
-  dispatch(event: GameEvent): void {
-    const state_before = this.state
-    this.state = Effect.runSync(Effect.match(apply(this.state, event), {
-      onFailure: (error) => {
-        reportStepError(error)
-        return this.state
-      },
-      onSuccess: (updated) => updated,
-    }))
-    logTransition(state_before, event, this.state)
+  dispatch(event:Action): void {
+    // const step_result = Effect.runSync(Effect.match(apply(this.state, event), {
+    //   onFailure: (outcomes) => {
+    //     reportStepError(outcome)
+    //     return 
+    //   },
+    //   onSuccess: (updated) => updated,
+    // }))
+    // logTransition(state_before, , this.state)
+    console.log("Transition Should be logged")
   }
 
   subscribe(listener: Listener) {

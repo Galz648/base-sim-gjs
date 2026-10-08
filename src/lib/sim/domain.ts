@@ -53,13 +53,23 @@ type CompletedMissionEvent = {
   mission_id: number;
   name: string;
 };
-type HourElapsedEvent = { type: "HourElapsed", _tag: "event/hour-elapsed"};
+type HourElapsedEvent = { type: "tick", _tag: "input/tick"};
 type MissionAssignmentEvent = {
   _tag: "event/mission-assignment"
   type: "MissionAssignmentEvent";
   mission_id: AvailableMission["id"];
   soldier_ids: SoldierId[];
 };
+type Action  = 
+  { _tag: "action/tick"; type: "Tick"; hours: number }
+| { _tag: "action/assign"; type: "Assign"; missionId: string; soldierIds: string[] };
+
+type Outcome = 
+  { _tag: "outcome/mission-available"; type: "MissionAvailable"; missionId: string }
+| { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: string; soldierIds: string[] }
+| { _tag: "outcome/assign-rejected"; type: "AssignRejected"; reason: string };
+        
+
 
 type ScheduledMission = {
   _tag: "mission/scheduled"
@@ -91,5 +101,7 @@ export type {
   MissionAssignmentEvent,
   Time,
   ScheduledMission,
-  ScheduledMissionEvent
+  ScheduledMissionEvent,
+  Outcome,
+  Action,
 };

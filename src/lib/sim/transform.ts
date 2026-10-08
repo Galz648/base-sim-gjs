@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import {
   ActiveMission,
   AvailableMission,
@@ -5,7 +6,33 @@ import {
   AliveSoldierState,
   GameState,
   SoldierId,
+  ScheduledMission,
 } from "./domain";
+import { StepError } from "./sim";
+
+
+function toAvailableMission(state: GameState, mission: ScheduledMission): Effect.Effect<GameState, StepError, never> {
+  // TODO: validate it's actually time to make it available
+  // move from scheduled to available
+  const scheduled = state.scheduled.filter((item) => {
+    item.id !== mission.id
+  })
+  const available: AvailableMission[] = [...state.available, ScheduledToAvailable(mission)]
+
+  return Effect.succeed({ ...state, scheduled, available })
+}
+
+
+function ScheduledToAvailable(mission: ScheduledMission): AvailableMission {
+  return {
+    _tag: "mission/available",
+    id: mission.id,
+    duration: mission.duration,
+    name: mission.name,
+    requiredSolders: mission.requiredSolders
+  }
+}
+
 
 function setDuty(
   state: GameState,
@@ -74,6 +101,8 @@ function tickMissions(state: GameState): GameState {
   };
 }
 
+// const isOnDuty = (s: GameState, id: SoldierId) =>
+//   s..some(m => m.status === "active" && m.assigned.includes(id));
 function unknownSoldiers(state: GameState, soldierIds: SoldierId[]): SoldierId[] {
   const rosterIds = new Set(state.roster.map((soldier) => soldier.id));
   return soldierIds.filter((id) => !rosterIds.has(id));
