@@ -48,12 +48,14 @@ type GameState = {
 };
 
 type CompletedMissionEvent = {
+  _tag: "event/completed-mission"
   type: "MissionCompleted";
   mission_id: number;
   name: string;
 };
-type HourElapsedEvent = { type: "HourElapsed" };
+type HourElapsedEvent = { type: "HourElapsed", _tag: "event/hour-elapsed"};
 type MissionAssignmentEvent = {
+  _tag: "event/mission-assignment"
   type: "MissionAssignmentEvent";
   mission_id: AvailableMission["id"];
   soldier_ids: SoldierId[];
@@ -68,6 +70,7 @@ type ScheduledMission = {
   requiredSolders: number,
 }
 type ScheduledMissionEvent = {
+  _tag: "event/schedule-mission"
   type: "ScheduledMissionEvent"
   mission: ScheduledMission
 }

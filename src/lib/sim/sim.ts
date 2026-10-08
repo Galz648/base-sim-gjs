@@ -21,19 +21,74 @@ import {
   tickMissions,
   unknownSoldiers,
 } from "./transform";
-import { logTransition } from "./utils";
+import { Store } from "./store";
 
-type Store = {
-  getTime(): Time;
-  getState(): GameState;
-  state: GameState;
-  events: GameEvent[];
-  dispatch(event: GameEvent): void;
-  subscribe(cb: () => void): void;
-};
+function getCompletedMissions(state: GameState): CompletedMissionEvent[]{
+  const freshly_completed = 
+  state.in_progress.filter((active: ActiveMission) => active.remaining === 0);
+const completed_missions_events: CompletedMissionEvent[] = freshly_completed.map(
+  (mission: ActiveMission): CompletedMissionEvent => {
+    return {
+      _tag: "event/completed-mission",
+      type: "MissionCompleted",
+      mission_id: mission.id,
+      name: mission.name,
+    };
+  },
+);
 
+return completed_missions_events
+}
+function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { //TODO: change name
+  return scheduled.filter((m) => {
+    return (m.startsAt.day <= t.day && m.startsAt.hour <= t.hour)
+  })
+}
 
+function apply(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
+  // Pure function
+  return step(state, event);
+}
 
+function step(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
+  if (event.type === "HourElapsed") {
+    const time = incrementTime({
+      day: state.day,
+      hour: state.hour,
+    });
+
+    return Effect.succeed({
+      ...tickMissions(state),
+      ...time,
+    });
+  }
+
+  if (event.type === "MissionCompleted") {
+    return completeMission(state, event);
+  }
+
+  if (event.type === "MissionAssignmentEvent") {
+    return assignSoldiers(state, event);
+  }
+
+  if (event.type === "ScheduledMissionEvent") {
+    return makeMissionAvailable(state, event.mission)
+  }
+  const _exhaustive: never = event;
+  return _exhaustive;
+}
+
+function incrementTime(time: Time): Time {
+  const increment = (x: number) => x + 1;
+  const total_time = increment(time.hour) + time.day * 24;
+  const hour = total_time % 24;
+  const day = Math.floor(total_time / 24);
+
+  return {
+    hour,
+    day,
+  };
+}
 type MissionNotFound = {
   readonly _tag: "MissionNotFound";
   readonly missionId: number;
@@ -167,7 +222,7 @@ const completeMission = (
     Effect.succeed(finishMission(state, mission)),
   );
 
-const reportStepError = (error: StepError): void => {
+export const reportStepError = (error: StepError): void => {
   Match.value(error).pipe(
     Match.tag("MissionNotFound", (e) => {
       console.log(`Mission with id ${e.missionId} not found.`);
@@ -199,192 +254,46 @@ const reportStepError = (error: StepError): void => {
 class Sim {
   store: Store;
 
-  constructor() {
-    this.store = {
-      state: {
-        roster: [
-          {
-            _tag: "soldier/alive",
-            id: 2,
-            name: "Gal",
-            health: 100,
-            stamina: 50,
-            duty: "rest",
-            condition: "fit",
-          },
-          {
-            _tag: "soldier/alive",
-            id: 1,
-            name: "Nir",
-            health: 100,
-            stamina: 100,
-            duty: "active",
-            condition: "fit",
-          },
-        ],
-        day: 1,
-        available: [
-          {
-            id: 1,
-            duration: 6,
-            name: "Recon Patrol",
-            requiredSolders: 1,
-            _tag: "mission/available",
-          },
-        ],
-        hour: 1,
-        in_progress: [
-          {
-            id: 1,
-            remaining: 6,
-            assigned: [1],
-            name: "Supply Run",
-            _tag: "mission/active",
-          },
-        ],
-        completed: [],
-        scheduled: [{
-          id: 3,
-          name: "Break",
-          startsAt: {
-            hour: 1,
-            day: 1
-          },
-          duration: 2,
-          _tag: "mission/scheduled",
-          requiredSolders: 0
-        }]
-      },
-      events: [],
-      dispatch: (event: GameEvent): void => {
-        // this.store.events.push_front(event)
-        const state = this.store.state;
-        const next = Effect.runSync(
-          Effect.match(this.apply(state, event), {
-            onFailure: (error) => {
-              reportStepError(error);
-              return state;
-            },
-            onSuccess: (updated) => updated,
-          })
-        );
-        // TODO: This will not work under godot probably - move this somewhere else, possibly entrypoint.ts
-        logTransition(state, event, next);
-        this.store.state = next;
-      },
-      subscribe: function (cb: () => void): void {
-        cb();
-      },
-      getState: function (): GameState {
-        return this.state;
-      },
-      getTime: function (): Time {
-        return {
-          hour: this.getState().hour,
-          day: this.getState().day
-        }
-      }
-    };
+  constructor(store: Store) {
+    this.store = store;
   }
 
-  tick(): HourElapsedEvent {
-    console.log(`tick`);
-    return {
-      type: "HourElapsed",
-    };
-  }
 
-  private incrementTime(time: Time): Time {
-    const increment = (x: number) => x + 1;
-    const total_time = increment(time.hour) + time.day * 24;
-    const hour = total_time % 24;
-    const day = Math.floor(total_time / 24);
 
-    return {
-      hour,
-      day,
-    };
-  }
 
-  apply(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
-    // Pure function
-    return this.step(state, event);
-  }
 
-  private step(state: GameState, event: GameEvent): Effect.Effect<GameState, StepError> {
-    if (event.type === "HourElapsed") {
-      const time = this.incrementTime({
-        day: state.day,
-        hour: state.hour,
-      });
-
-      return Effect.succeed({
-        ...tickMissions(state),
-        ...time,
-      });
-    }
-
-    if (event.type === "MissionCompleted") {
-      return completeMission(state, event);
-    }
-
-    if (event.type === "MissionAssignmentEvent") {
-      return assignSoldiers(state, event);
-    }
-
-    if (event.type === "ScheduledMissionEvent") {
-      return makeMissionAvailable(state, event.mission)
-    }
-    const _exhaustive: never = event;
-    return _exhaustive;
-  }
 
   start(tickMs: number = CONFIG.TICK_DURATION): void {
-    // TODO: this should be runtime agnostic, so it fits in GODOT (so no SetInterval, should probably be wrapped in some Timer construct, to mimic Godot roughly)
+    //TODO: choose if the tick should happen before the other events
     setInterval(() => {
-      //TODO: choose if the tick should happen before the other events
-      function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { //TODO: change name
-        return scheduled.filter((m) => {
-          return (m.startsAt.day <= t.day && m.startsAt.hour <= t.hour)
-        })
-      }
+
       const scheduled = this.store.getState().scheduled
       const time = this.store.getTime()
-      // const scheduled_events = isAvailable(scheduled, time) 
 
       isReady(scheduled, time).forEach((mission) => {
         this.store.dispatch(
           {
+            _tag: "event/schedule-mission",
             type: "ScheduledMissionEvent",
             mission
           }
         )
       })
-      const event = this.tick();
-      this.store.dispatch(event);
-    }, tickMs);
 
-    setInterval(() => {
-      const freshly_completed = this.store
-        .getState()
-        .in_progress.filter((active: ActiveMission) => active.remaining === 0);
-      const completed_missions_events = freshly_completed.map(
-        (mission: ActiveMission): CompletedMissionEvent => {
-          return {
-            type: "MissionCompleted",
-            mission_id: mission.id,
-            name: mission.name,
-          };
-        },
-      );
-      completed_missions_events.forEach((e: CompletedMissionEvent) =>
+      
+      getCompletedMissions(this.store.getState()).forEach((e: CompletedMissionEvent) =>
         this.store.dispatch(e),
       );
+
+      this.store.dispatch({
+        _tag: "event/hour-elapsed",
+        type: "HourElapsed"
+      });
     }, tickMs);
+
   }
 }
 
-export { Sim };
 
 
 function makeMissionAvailable(state: GameState, mission: ScheduledMission): Effect.Effect<GameState, StepError, never> {
@@ -395,7 +304,7 @@ function makeMissionAvailable(state: GameState, mission: ScheduledMission): Effe
   })
   const available: AvailableMission[] = [...state.available, ScheduledToAvailable(mission)]
 
-  return Effect.succeed({...state, scheduled, available})
+  return Effect.succeed({ ...state, scheduled, available })
 }
 
 
@@ -408,3 +317,6 @@ function ScheduledToAvailable(mission: ScheduledMission): AvailableMission {
     requiredSolders: mission.requiredSolders
   }
 }
+
+
+export { Sim, type Store, apply}
