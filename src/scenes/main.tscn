@@ -1,6 +1,106 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://src/scripts/main.ts" id="1_main"]
+[ext_resource type="Script" path="res://src/scripts/mission-list.ts" id="2_list"]
+[ext_resource type="Script" path="res://src/scripts/mission-detail.ts" id="3_detail"]
+[ext_resource type="Script" path="res://src/scripts/clock.ts" id="4_clock"]
+[ext_resource type="Script" path="res://src/scripts/mission-viewer.ts" id="5_viewer"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_main")
+
+[node name="UI" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MissionViewer" type="Control" parent="UI"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_viewer")
+
+[node name="AvailableMissions" type="VBoxContainer" parent="UI/MissionViewer"]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 400.0
+offset_bottom = 640.0
+theme_override_constants/separation = 8
+script = ExtResource("2_list")
+
+[node name="MissionDetail" type="Control" parent="UI/MissionViewer"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("3_detail")
+
+[node name="Dim" type="ColorRect" parent="UI/MissionViewer/MissionDetail"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0, 0, 0, 0.55)
+
+[node name="Card" type="PanelContainer" parent="UI/MissionViewer/MissionDetail"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -90.0
+offset_right = 200.0
+offset_bottom = 90.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="UI/MissionViewer/MissionDetail/Card"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="UI/MissionViewer/MissionDetail/Card/VBox"]
+layout_mode = 2
+text = "Mission"
+
+[node name="Body" type="Label" parent="UI/MissionViewer/MissionDetail/Card/VBox"]
+layout_mode = 2
+text = ""
+autowrap_mode = 3
+
+[node name="Close" type="Button" parent="UI/MissionViewer/MissionDetail/Card/VBox"]
+layout_mode = 2
+text = "Close"
+
+[node name="Clock" type="Label" parent="UI"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 16.0
+offset_right = -24.0
+offset_bottom = 48.0
+grow_horizontal = 0
+mouse_filter = 2
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 2
+text = "Day 1  01:00"
+script = ExtResource("4_clock")

@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://src/scripts/mission-widget.ts" id="1_widget"]
+
+[node name="MissionWidget" type="Button"]
+custom_minimum_size = Vector2(320, 52)
+text = "Mission"
+script = ExtResource("1_widget")
