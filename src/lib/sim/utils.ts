@@ -204,7 +204,7 @@ function outcomeLine(outcome: Outcome): string {
     return `${ansi.dim}outcome${ansi.reset}  ${ansi.bold}${ansi.green}${outcome.type}${ansi.reset}  mission ${outcome.missionId}`;
   }
   const crew = outcome.soldierIds.length === 0 ? "—" : outcome.soldierIds.join(", ");
-  return `${ansi.dim}outcome${ansi.reset}  ${ansi.bold}${ansi.cyan}${outcome.type}${ansi.reset}  mission ${outcome.missionId}  soldiers ${crew}`;
+  return `${ansi.dim}outcome${ansi.reset}  ${ansi.bold}${ansi.cyan}${outcome._tag}${ansi.reset}  mission ${outcome.missionId}  soldiers ${crew}`;
 }
 
 export function logStepSuccess(state: GameState, outcomes: Outcome[]): void {

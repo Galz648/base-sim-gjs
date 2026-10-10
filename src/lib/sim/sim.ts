@@ -62,27 +62,16 @@ function apply(state: GameState, action: Action): Effect.Effect<StepOutcome, Ste
   }
 
   if (action.type === "Assign") {
-    // TODO: return an assignment failed
 
     const assignment_result = tryAssign(action, state);
     const assignment_outcome = Result.match(assignment_result, {
       onSuccess: (accepted): StepOutcome => ({
         state: accepted.state,
-        outcomes: [{
-          _tag: "outcome/assignment-accepted",
-          type: "AssignAccepted",
-          missionId: String(action.missionId),
-          soldierIds: action.soldierIds,
-        }],
+        outcomes: [accepted],
       }),
       onFailure: (rejected): StepOutcome => ({
         state: rejected.state,
-        outcomes: [{
-          _tag: "outcome/assign-rejected",
-          type: "AssignRejected",
-          missionId: String(action.missionId),
-          soldierIds: action.soldierIds,
-        }],
+        outcomes: [rejected],
       }),
     });
     return Effect.succeed(assignment_outcome);
@@ -243,7 +232,7 @@ function closeFinishedMissions(state: GameState, outcomes: Outcome[]): GameState
     outcomes.push({ // TODO: return this 
       _tag: "outcome/mission-completed",
       type: "MissionCompleted",
-      missionId: String(mission.id),
+      missionId: mission.id,
       soldierIds: mission.assigned.map(Number),
     });
     
@@ -258,7 +247,7 @@ function openScheduledMissions(state: GameState, outcomes: Outcome[]): GameState
     outcomes.push({ // TODO: return the outcomes
       _tag: "outcome/mission-available",
       type: "MissionAvailable",
-      missionId: String(mission.id),
+      missionId: mission.id,
     });
   }
   return {

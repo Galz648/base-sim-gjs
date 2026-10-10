@@ -13,6 +13,7 @@ interface DeadSoldierState {
   id: number;
   name: string;
 }
+type MissionId = number
 type SoldierId = AliveSoldierState["id"] | DeadSoldierState["id"];
 type SoldierState = AliveSoldierState | DeadSoldierState;
 
@@ -64,13 +65,24 @@ type TickAction =   { _tag: "action/tick"; type: "Tick"; hours: number }
 type AssignmentAction = { _tag: "action/assign"; type: "Assign"; missionId: number; soldierIds: SoldierId[]};
 type Action  = TickAction | AssignmentAction
 
+type AssignmentRejectedOutcome = {
+  _tag:
+    | "outcome/assignment-rejected/mission-not-available"
+    | "outcome/assignment-rejected/not-enough-soldiers"
+    | "outcome/assignment-rejected/soldiers-not-resting"
+  state: GameState;
+  missionId: number;
+  soldierIds: SoldierId[]
+}
+type MissionAvailableOutcome = { _tag: "outcome/mission-available"; type: "MissionAvailable"; missionId: MissionId};
+type MissionCompletedOutcome = { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: MissionId; soldierIds: SoldierId[] };
+type AssignmentAcceptedOutcome = { _tag: "outcome/assignment-accepted"; type: "AssignAccepted"; missionId: MissionId; soldierIds: SoldierId[], state: GameState}; // TODO: change reason `string` to a typed union
 
-
-type Outcome =  // Expected game outcome
-  { _tag: "outcome/mission-available"; type: "MissionAvailable"; missionId: string }
-| { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: string; soldierIds: SoldierId[] }
-| { _tag: "outcome/assign-rejected"; type: "AssignRejected"; missionId: string; soldierIds: SoldierId[] }
-| { _tag: "outcome/assignment-accepted"; type: "AssignAccepted"; missionId: string; soldierIds: SoldierId[] }
+type Outcome =
+  | MissionAvailableOutcome
+  | MissionCompletedOutcome
+  | AssignmentRejectedOutcome
+  | AssignmentAcceptedOutcome;
 
 
 type ScheduledMission = {
@@ -107,5 +119,8 @@ export type {
   Outcome,
   Action,
   TickAction,
-  AssignmentAction
+  AssignmentAction,
+  AssignmentRejectedOutcome,
+  AssignmentAcceptedOutcome,
+  MissionId
 };
