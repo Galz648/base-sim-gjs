@@ -27,11 +27,12 @@ import {
   ScheduledToAvailable,
 } from "./transform";
 import { Store } from "./store";
+import { logStepSuccess } from "./utils";
 import { SoldiersNotReady, SoldiersAlreadyDeployed, InsufficientHeadcount } from "./assignment";
 import { MissionNotFound, UnknownSoldiers } from "./error";
 
 
-type StepResult = { outcomes: Outcome[], state: GameState } // TODO: change name `Result` - not the result type !
+type StepOutcome = { outcomes: Outcome[], state: GameState } // TODO: change name `Result` - not the result type !
 function getCompletedMissions(state: GameState): CompletedMissionEvent[]{
   const freshly_completed = 
   state.in_progress.filter((active: ActiveMission) => active.remaining === 0);
@@ -56,7 +57,7 @@ function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { /
 
 // TODO(s1): the failure channel is `never` here, while Store.dispatch matches on StepError. Run
 // `bun run typecheck` first and fix only a mismatch it actually reports. Widening the channel is s3's job.
-function apply(state: GameState, action: Action): Effect.Effect<StepResult, never> {
+function apply(state: GameState, action: Action): Effect.Effect<StepOutcome, StepError> {
   if (action.type === "Tick") {
     return Effect.succeed(onTick(state, action.hours));
   }
@@ -87,9 +88,9 @@ type StepError =
   | MissionNotFound
   | UnknownSoldiers
 
-type StepOk = { ok: true; result: StepResult }
+type StepOk = { ok: true; result: StepOutcome }
 type StepFail = { ok: false; state: GameState; error: StepError }
-type StepOutcome = StepOk | StepFail
+type StepResult = StepOk | StepFail
 const findAvailableMission = (
   state: GameState,
   missionId: number,
@@ -243,7 +244,7 @@ function openScheduledMissions(state: GameState, outcomes: Outcome[]): GameState
   };
 }
 
-function onTick(state: GameState, hours: number): StepResult {
+function onTick(state: GameState, hours: number): StepOutcome {
   const outcomes: Outcome[] = [];
   let next = state;
   for (let step = 0; step < hours; step++) {
@@ -270,6 +271,17 @@ class Sim {
     //TODO: choose if the tick should happen before the other events
     // TODO(s1): the order today is in onTick (time, missions tick, finished close, scheduled open). Keep
     // it, confirm it by watching the bun run, and replace the TODO above with one line stating the order.
+
+    // assign listener
+
+    /// type Listener = (state:GameState, outcomes: Outcome[]) => void;
+    this.store.subscribe((result: StepResult) => {
+      if (result.ok) {
+        logStepSuccess(result.result.state, result.result.outcomes);
+        return;
+      }
+      reportStepError(result.error);
+    });
     setInterval(() => {
     // move time
     this.store.dispatch({

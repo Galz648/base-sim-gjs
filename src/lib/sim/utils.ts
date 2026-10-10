@@ -1,4 +1,4 @@
-import { ActiveMission, AliveSoldierState, GameEvent, GameState } from "./domain";
+import { ActiveMission, AliveSoldierState, GameEvent, GameState, Outcome } from "./domain";
 
 // ANSI colors only when printing to a real terminal (Bun). Godot's Output panel prints the escape
 // codes raw (and GodotJS has no `process`), so inside Godot the board is plain text.
@@ -197,6 +197,27 @@ export function logTransition(
     ...rosterTransition(before, after).split("\n"),
   ];
   console.log(zipColumns(left, missionPanel(before, after)));
+}
+
+function outcomeLine(outcome: Outcome): string {
+  if (outcome._tag === "outcome/mission-available") {
+    return `${ansi.dim}outcome${ansi.reset}  ${ansi.bold}${ansi.green}${outcome.type}${ansi.reset}  mission ${outcome.missionId}`;
+  }
+  const crew = outcome.soldierIds.length === 0 ? "—" : outcome.soldierIds.join(", ");
+  return `${ansi.dim}outcome${ansi.reset}  ${ansi.bold}${ansi.cyan}${outcome.type}${ansi.reset}  mission ${outcome.missionId}  soldiers ${crew}`;
+}
+
+export function logStepSuccess(state: GameState, outcomes: Outcome[]): void {
+  const left = [
+    `${ansi.dim}state${ansi.reset}  day ${state.day}  hour ${String(state.hour).padStart(2)}`,
+    ...(outcomes.length === 0
+      ? [`${ansi.dim}outcome${ansi.reset}  ${ansi.dim}none${ansi.reset}`]
+      : outcomes.map(outcomeLine)),
+    ...state.roster.map((s) => {
+      return `  ${s.name.padEnd(8)} ${paintDuty(s.duty)}  ${paintCondition(s.condition)}  hp ${paintNum(s.health)}  stamina ${paintNum(s.stamina)}`;
+    }),
+  ];
+  console.log(zipColumns(left, missionPanel(state, state)));
 }
 
 export function logApply(state: GameState, event: GameEvent): void {
