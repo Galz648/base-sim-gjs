@@ -11,3 +11,6 @@ typings/godot.minimal.d.ts
 typings/godot.mix.d.ts
 typings/godot.worker.d.ts
 typings/jsb.*.d.ts
+
+# local Effect drills, not committed
+scratch/

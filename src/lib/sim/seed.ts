@@ -51,6 +51,8 @@ export function initialState(): GameState {
           hour: 2,
           day: 1,
         },
+        // TODO: was `duration: 2` before the scenario work; changed to 3 without a recorded reason. Keep 3 on
+        // purpose (and say why), or put it back to 2.
         duration: 3,
         _tag: "mission/scheduled",
         requiredSolders: 1,

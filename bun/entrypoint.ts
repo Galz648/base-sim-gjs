@@ -12,7 +12,9 @@ const assignGal: AssignmentAction = {
   missionId: 3,
   soldierIds: [2],
 };
-// Nir is still out on Supply Run, so Recon Patrol rejects him.
+// TODO: wrong comment and wrong scenario. This is mission 3 (Bathroom Cleaning), not Recon Patrol, and Gal
+// takes mission 3 one step earlier, so Nir would get `mission-not-available`, not `soldiers-not-resting`.
+// Point it at mission 1 (Recon Patrol) to exercise the not-resting rejection in the accept scenario.
 const assignNir: AssignmentAction = {
   _tag: "action/assign",
   type: "Assign",
@@ -37,12 +39,16 @@ const rejectScenario: { atHour: number; action: Action }[] = [
   { atHour: 1, action: assignNirWhileOut },
 ];
 
+// TODO: the accept branch has never been watched in a run, because this is hardwired to the reject scenario.
+// Switch to acceptScenario once, look at the output, then make the choice a CLI argument or an env var.
 const scenario = rejectScenario;
 
 (() => {
   const sim = new Sim(new Store(initialState()));
   let nextStep = 0;
   sim.start(CONFIG.TICK_DURATION, () => {
+    // TODO: bug. This reads `hour` only and ignores `day`, so `atHour` wraps at 24. Compare
+    // `day * 24 + hour`, the same unit `startsAt` uses in onTick.
     const { hour } = sim.store.getTime();
     while (nextStep < scenario.length && scenario[nextStep].atHour <= hour) {
       sim.store.dispatch(scenario[nextStep].action);

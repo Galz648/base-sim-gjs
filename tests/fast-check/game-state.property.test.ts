@@ -2,6 +2,10 @@
  * Same GameState properties as ../game-state.property.test.ts, written in fast-check.
  * Effect suite is untouched. Run this folder: bun test tests/fast-check
  */
+// TODO: duplicate suite. The same properties exist in ../game-state.property.test.ts with Effect's Arbitrary,
+// and the generators are duplicated in ../arbitrary and ./game-state.ts. Keep ONE (fast-check is the
+// documented route for property-based testing), delete the other once the properties match, so a change
+// to a generator is made in one place.
 import { describe, test } from "bun:test";
 import { Effect } from "effect";
 import fc from "fast-check";

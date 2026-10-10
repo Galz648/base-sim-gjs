@@ -281,8 +281,8 @@ class Sim {
 
 
   start(tickMs: number = CONFIG.TICK_DURATION, beforeTick?: () => void): void {
-    // TODO(s1): the order today is in onTick (time, missions tick, finished close, scheduled open). Keep
-    // it, confirm it by watching the bun run, and replace the TODO above with one line stating the order.
+    // Order per turn (decided 2026-10-10): scripted actions for the current hour, then one Tick. Inside the
+    // Tick, onTick runs: time, missions tick, finished close, scheduled open.
 
     this.store.subscribe((result: StepResult) => {
       if (result.ok) {

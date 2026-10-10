@@ -43,6 +43,9 @@ function tryAssign(assignment_action: AssignmentAction, state: GameState): Resul
         })
     }
 
+      // TODO(s5): two spec gaps, found by the property tests (see tests/UNCOVERED.md). 1) Every roster match is
+      // deployed, not just `requiredSolders` of them. Decide the spec first (all of them, or a prefix).
+      // 2) `condition: "injured"` is never checked here, so an injured soldier at rest can deploy.
       const new_state: GameState = availableToActive(state, mission, soldiers.map((s) => s.id)) 
       return Result.succeed({ _tag: "outcome/assignment-accepted", state: new_state, type: "AssignAccepted", soldierIds: assignment_action.soldierIds, missionId: assignment_action.missionId})
 }
