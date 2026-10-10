@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { GameState, GameEvent, Time, Outcome, Action } from "./domain";
 import { logTransition } from "./utils";
-import { apply, reportStepError, StepError } from "./sim";
+import { apply, reportStepError, StepError, StepFail, StepOk, StepOutcome } from "./sim";
 
 
 type Listener = (state:GameState, outcomes: Outcome[]) => void;
@@ -17,17 +17,20 @@ export class Store {
   }
 
   dispatch(event:Action): void {
-    const step_result = Effect.runSync(Effect.match(apply(this.state, event), {
-      onFailure: (error: StepError) => {
-        reportStepError(error)
-        return 
-      },
-      onSuccess: (updated) => updated,
+    // TODO(s1): Effect.match folds the effect into ONE value, so both handlers must return the same shape.
+    // onFailure returns StepError and onSuccess returns StepResult, so step_result is a union and cannot
+    // be assigned to this.state. Decide what a failure hands back. Learn match in a scratch file first.
+    const step_outcome: StepOutcome = Effect.runSync(Effect.match(apply(this.state, event), {
+      onFailure: (error) => ({ ok: false, state: this.state, error }),
+      onSuccess: (result) => ({ ok: true, result}),
     }))
+    console.log()
+    this.state = step_outcome.ok ? step_outcome.result.state : this.state // TODO: determine how to handle the error
+  
+    for (const listener of this.#listeners) {
+    listener(this.state, step_outcome.ok ? step_outcome.result.outcomes : []); // TODO: determine how this changes if we decide to report errors
+  }
 
-    // this.state = step_result // TODO: reassign state here
-    // logTransition(state_before, , this.state)
-    console.log("Transition Should be logged")
   }
 
   subscribe(listener: Listener) {

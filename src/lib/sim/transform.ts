@@ -130,4 +130,6 @@ export {
   unknownSoldiers,
   soldiersNotReady,
   soldiersAlreadyDeployed,
+  ScheduledToAvailable,
+  toAvailableMission
 };

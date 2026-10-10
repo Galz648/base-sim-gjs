@@ -16,12 +16,15 @@ import {
   Action,
 } from "./domain";
 import {
+  ActiveToCompleted,
   availableToActive,
   finishMission,
+  releaseSoldiers,
   soldiersAlreadyDeployed,
   soldiersNotReady,
   tickMissions,
   unknownSoldiers,
+  ScheduledToAvailable,
 } from "./transform";
 import { Store } from "./store";
 import { SoldiersNotReady, SoldiersAlreadyDeployed, InsufficientHeadcount } from "./assignment";
@@ -46,24 +49,15 @@ const completed_missions_events: CompletedMissionEvent[] = freshly_completed.map
 return completed_missions_events
 }
 function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { //TODO: change name
-  return scheduled.filter((m) => {
-    return (m.startsAt.day <= t.day && m.startsAt.hour <= t.hour)
-  })
+  const now = t.day * 24 + t.hour;
+  return scheduled.filter((m) => m.startsAt.day * 24 + m.startsAt.hour <= now);
 }
 
 
+// TODO(s1): the failure channel is `never` here, while Store.dispatch matches on StepError. Run
+// `bun run typecheck` first and fix only a mismatch it actually reports. Widening the channel is s3's job.
 function apply(state: GameState, action: Action): Effect.Effect<StepResult, never> {
   if (action.type === "Tick") {
-    const time = incrementTime({
-      day: state.day,
-      hour: state.hour,
-    });
-
-    // return Effect.succeed({
-    //   // ...tickMissions(state),
-    //   // ...time,
-    // });
-    void time;
     return Effect.succeed(onTick(state, action.hours));
   }
 
@@ -93,7 +87,9 @@ type StepError =
   | MissionNotFound
   | UnknownSoldiers
 
-
+type StepOk = { ok: true; result: StepResult }
+type StepFail = { ok: false; state: GameState; error: StepError }
+type StepOutcome = StepOk | StepFail
 const findAvailableMission = (
   state: GameState,
   missionId: number,
@@ -217,12 +213,46 @@ export const reportStepError = (error: StepError): void => {
     Match.exhaustive,
   );
 };
-function onTick(s: GameState, hours: number) {
-  const out: Outcome[] = [];
-  // s = advanceClock(s, hours);
-  // s = completeFinishedMissions(s, out);  // marks done + releases soldiers
-  // s = openScheduledMissions(s, out);
-  return { state: s, outcomes: out };
+function closeFinishedMissions(state: GameState, outcomes: Outcome[]): GameState {
+  const finished = state.in_progress.filter((mission) => mission.remaining <= 0);
+  return finished.reduce((current, mission) => {
+    outcomes.push({
+      _tag: "outcome/mission-completed",
+      type: "MissionCompleted",
+      missionId: String(mission.id),
+      soldierIds: mission.assigned.map(String),
+    });
+    return releaseSoldiers(ActiveToCompleted(current, mission), mission.assigned);
+  }, state);
+}
+
+function openScheduledMissions(state: GameState, outcomes: Outcome[]): GameState {
+  const ready = isReady(state.scheduled, { day: state.day, hour: state.hour });
+  const readyIds = new Set(ready.map((mission) => mission.id));
+  for (const mission of ready) {
+    outcomes.push({
+      _tag: "outcome/mission-available",
+      type: "MissionAvailable",
+      missionId: String(mission.id),
+    });
+  }
+  return {
+    ...state,
+    scheduled: state.scheduled.filter((mission) => !readyIds.has(mission.id)),
+    available: [...state.available, ...ready.map(ScheduledToAvailable)],
+  };
+}
+
+function onTick(state: GameState, hours: number): StepResult {
+  const outcomes: Outcome[] = [];
+  let next = state;
+  for (let step = 0; step < hours; step++) {
+    const time = incrementTime({ day: next.day, hour: next.hour });
+    next = tickMissions({ ...next, day: time.day, hour: time.hour });
+    next = closeFinishedMissions(next, outcomes);
+    next = openScheduledMissions(next, outcomes);
+  }
+  return { state: next, outcomes };
 }
 class Sim {
   store: Store;
@@ -238,8 +268,16 @@ class Sim {
 
   start(tickMs: number = CONFIG.TICK_DURATION): void {
     //TODO: choose if the tick should happen before the other events
+    // TODO(s1): the order today is in onTick (time, missions tick, finished close, scheduled open). Keep
+    // it, confirm it by watching the bun run, and replace the TODO above with one line stating the order.
     setInterval(() => {
-      onTick(this.store.getState(), 1)
+    // move time
+    this.store.dispatch({
+      _tag: "action/tick",
+      type: "Tick",
+      hours: 1
+    })
+
     }, tickMs);
 
   }
@@ -249,4 +287,4 @@ class Sim {
 
 
 
-export { Sim, type Store, apply, StepError}
+export { Sim, type Store, apply, StepError, StepOk, StepFail, StepOutcome, StepResult}
