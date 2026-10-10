@@ -2,6 +2,7 @@
   "name": "base-sim",
   "devDependencies": {
     "@types/bun": "latest",
+    "fast-check": "^4.10.2",
     "source-map-js": "^1.2.2",
     "typescript": "^5.9.0"
   },
@@ -17,6 +18,8 @@
     "headless:mapped": "bun tools/godot.ts --headless --quit-after 300 --path . 2>&1 | bun tools/unmap.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:watch": "tsc --noEmit --watch",
+    "test": "bun test tests",
+    "test:watch": "bun test --watch tests",
     "bun": "bun bun/entrypoint.ts",
     "watch:sim": "bun --watch bun/entrypoint.ts",
     "editor": "bun tools/godot.ts --editor --path .",
