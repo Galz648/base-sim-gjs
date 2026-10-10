@@ -212,12 +212,14 @@ export function logStepSuccess(state: GameState, outcomes: Outcome[]): void {
     `${ansi.dim}state${ansi.reset}  day ${state.day}  hour ${String(state.hour).padStart(2)}`,
     ...(outcomes.length === 0
       ? [`${ansi.dim}outcome${ansi.reset}  ${ansi.dim}none${ansi.reset}`]
-      : outcomes.map(outcomeLine)),
+      : []),
     ...state.roster.map((s) => {
       return `  ${s.name.padEnd(8)} ${paintDuty(s.duty)}  ${paintCondition(s.condition)}  hp ${paintNum(s.health)}  stamina ${paintNum(s.stamina)}`;
     }),
   ];
-  console.log(zipColumns(left, missionPanel(state, state)));
+  const board = zipColumns(left, missionPanel(state, state));
+  const header = outcomes.map(outcomeLine).join("\n");
+  console.log(header.length > 0 ? `${header}\n${board}` : board);
 }
 
 export function logApply(state: GameState, event: GameEvent): void {

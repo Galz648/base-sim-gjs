@@ -280,14 +280,10 @@ class Sim {
 
 
 
-  start(tickMs: number = CONFIG.TICK_DURATION): void {
-    //TODO: choose if the tick should happen before the other events
+  start(tickMs: number = CONFIG.TICK_DURATION, beforeTick?: () => void): void {
     // TODO(s1): the order today is in onTick (time, missions tick, finished close, scheduled open). Keep
     // it, confirm it by watching the bun run, and replace the TODO above with one line stating the order.
 
-    // assign listener
-
-    /// type Listener = (state:GameState, outcomes: Outcome[]) => void;
     this.store.subscribe((result: StepResult) => {
       if (result.ok) {
         logStepSuccess(result.result.state, result.result.outcomes);
@@ -296,15 +292,14 @@ class Sim {
       reportStepError(result.error);
     });
     setInterval(() => {
-    // move time
-    this.store.dispatch({
-      _tag: "action/tick",
-      type: "Tick",
-      hours: 1
-    })
-
+      // Scripted actions for the current hour, then one Tick.
+      beforeTick?.();
+      this.store.dispatch({
+        _tag: "action/tick",
+        type: "Tick",
+        hours: 1,
+      });
     }, tickMs);
-
   }
 }
 
