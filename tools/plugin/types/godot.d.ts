@@ -3,8 +3,12 @@
 export class Object {}
 
 export class Node extends Object {
+  name: string;
   get_node(path: string): Node | null;
   get_name(): string;
+  add_child(node: Node): void;
+  remove_child(node: Node): void;
+  queue_free(): void;
   set_script(script: Resource): void;
   connect(signal: string, callable: Callable, flags?: number): number;
   disconnect(signal: string, callable: Callable): void;
@@ -14,11 +18,31 @@ export class Node extends Object {
 export class CanvasItem extends Node {}
 export class Node2D extends CanvasItem {}
 export class Node3D extends Node {}
-export class Control extends CanvasItem {}
-export class Label extends Control {}
+export class Control extends CanvasItem {
+  visible: boolean;
+}
+export class Label extends Control {
+  text: string;
+}
+export class BaseButton extends Control {
+  pressed: Signal<() => void>;
+  disabled: boolean;
+}
+export class Button extends BaseButton {
+  text: string;
+}
+export class Container extends Control {}
+export class BoxContainer extends Container {}
+export class VBoxContainer extends BoxContainer {}
 export class Sprite2D extends Node2D {}
 
 export class Resource extends Object {}
+export class PackedScene<T = Node> extends Resource {
+  instantiate(): T;
+}
+export class ResourceLoader {
+  static load(path: string, typeHint?: string, cacheMode?: number): Resource;
+}
 export class Script extends Resource {
   call(method: string, ...args: unknown[]): unknown;
 }

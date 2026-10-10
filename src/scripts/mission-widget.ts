@@ -1,23 +1,30 @@
 import { Button, Signal } from "godot";
 import { gd } from "../lib/gd";
-import type { AvailableMission } from "../lib/sim/domain";
+
+export type MissionRow = {
+  id: number;
+  text: string;
+  pickable: boolean;
+};
 
 @gd.class
 export default class MissionWidget extends Button {
-  mission: AvailableMission | null = null;
+  missionId: number | null = null;
+  pickable = false;
   @gd.signal() accessor mission_picked!: Signal<(missionId: number) => void>;
 
   _ready(): void {
     this.pressed.connect(() => {
-      if (!this.mission) return;
-      console.log("mission clicked", this.mission.id, this.mission.name);
-      this.mission_picked.emit(this.mission.id);
+      if (!this.pickable || this.missionId === null) return;
+      this.mission_picked.emit(this.missionId);
     });
   }
 
-  sync(mission: AvailableMission): void {
-    this.mission = mission;
-    this.name = `mission-${mission.id}`;
-    this.text = `${mission.name}  ·  ${mission.requiredSolders} needed  ·  ${mission.duration}h`;
+  sync(row: MissionRow): void {
+    this.missionId = row.id;
+    this.pickable = row.pickable;
+    this.disabled = !row.pickable;
+    this.name = `mission-${row.id}`;
+    this.text = row.text;
   }
 }

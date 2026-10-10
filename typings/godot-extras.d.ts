@@ -10,6 +10,26 @@ declare module "godot" {
     emit(...args: Parameters<T>): void;
   }
   interface Node {
+    name: string;
     get_name(): string;
+    get_node(path: string): Node | null;
+    add_child(node: Node): void;
+    remove_child(node: Node): void;
+    queue_free(): void;
+  }
+  interface Control {
+    visible: boolean;
+  }
+  interface Label {
+    text: string;
+  }
+  interface BaseButton {
+    disabled: boolean;
+  }
+  interface Button {
+    disabled: boolean;
+  }
+  interface PackedScene<T = any> {
+    instantiate(): T;
   }
 }
