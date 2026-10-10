@@ -59,13 +59,18 @@ type MissionAssignmentEvent = {
   mission_id: AvailableMission["id"];
   soldier_ids: SoldierId[];
 };
-type Action  = 
-  { _tag: "action/tick"; type: "Tick"; hours: number }
-| { _tag: "action/assign"; type: "Assign"; missionId: string; soldierIds: string[] };
+
+type TickAction =   { _tag: "action/tick"; type: "Tick"; hours: number }
+type AssignmentAction = { _tag: "action/assign"; type: "Assign"; missionId: number; soldierIds: SoldierId[]};
+type Action  = TickAction | AssignmentAction
+
+
 
 type Outcome =  // Expected game outcome
   { _tag: "outcome/mission-available"; type: "MissionAvailable"; missionId: string }
-| { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: string; soldierIds: string[] }
+| { _tag: "outcome/mission-completed"; type: "MissionCompleted"; missionId: string; soldierIds: SoldierId[] }
+| { _tag: "outcome/assign-rejected"; type: "AssignRejected"; missionId: string; soldierIds: SoldierId[] }
+| { _tag: "outcome/assignment-accepted"; type: "AssignAccepted"; missionId: string; soldierIds: SoldierId[] }
 
 
 type ScheduledMission = {
@@ -101,4 +106,6 @@ export type {
   ScheduledMissionEvent,
   Outcome,
   Action,
+  TickAction,
+  AssignmentAction
 };

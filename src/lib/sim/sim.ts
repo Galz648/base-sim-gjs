@@ -1,4 +1,4 @@
-import { Effect, Match } from "effect";
+import { Effect, Match, Result } from "effect";
 import { CONFIG } from "./config";
 import {
   GameState,
@@ -30,9 +30,10 @@ import { Store } from "./store";
 import { logStepSuccess } from "./utils";
 import { SoldiersNotReady, SoldiersAlreadyDeployed, InsufficientHeadcount } from "./assignment";
 import { MissionNotFound, UnknownSoldiers } from "./error";
+import { tryAssign } from "./mission";
 
 
-type StepOutcome = { outcomes: Outcome[], state: GameState } // TODO: change name `Result` - not the result type !
+type StepOutcome = { outcomes: Outcome[], state: GameState }
 function getCompletedMissions(state: GameState): CompletedMissionEvent[]{
   const freshly_completed = 
   state.in_progress.filter((active: ActiveMission) => active.remaining === 0);
@@ -55,15 +56,37 @@ function isReady(scheduled: ScheduledMission[], t: Time): ScheduledMission[] { /
 }
 
 
-// TODO(s1): the failure channel is `never` here, while Store.dispatch matches on StepError. Run
-// `bun run typecheck` first and fix only a mismatch it actually reports. Widening the channel is s3's job.
 function apply(state: GameState, action: Action): Effect.Effect<StepOutcome, StepError> {
   if (action.type === "Tick") {
     return Effect.succeed(onTick(state, action.hours));
   }
 
   if (action.type === "Assign") {
-    return Effect.succeed({ outcomes: [], state });
+    // TODO: return an assignment failed
+
+    const assignment_result = tryAssign(action, state);
+    const assignment_outcome = Result.match(assignment_result, {
+      onSuccess: (accepted): StepOutcome => ({
+        state: accepted.state,
+        outcomes: [{
+          _tag: "outcome/assignment-accepted",
+          type: "AssignAccepted",
+          missionId: String(action.missionId),
+          soldierIds: action.soldierIds,
+        }],
+      }),
+      onFailure: (rejected): StepOutcome => ({
+        state: rejected.state,
+        outcomes: [{
+          _tag: "outcome/assign-rejected",
+          type: "AssignRejected",
+          missionId: String(action.missionId),
+          soldierIds: action.soldierIds,
+        }],
+      }),
+    });
+    return Effect.succeed(assignment_outcome);
+
   }
 
   const _exhaustive: never = action;
@@ -217,12 +240,13 @@ export const reportStepError = (error: StepError): void => {
 function closeFinishedMissions(state: GameState, outcomes: Outcome[]): GameState {
   const finished = state.in_progress.filter((mission) => mission.remaining <= 0);
   return finished.reduce((current, mission) => {
-    outcomes.push({
+    outcomes.push({ // TODO: return this 
       _tag: "outcome/mission-completed",
       type: "MissionCompleted",
       missionId: String(mission.id),
-      soldierIds: mission.assigned.map(String),
+      soldierIds: mission.assigned.map(Number),
     });
+    
     return releaseSoldiers(ActiveToCompleted(current, mission), mission.assigned);
   }, state);
 }
@@ -231,7 +255,7 @@ function openScheduledMissions(state: GameState, outcomes: Outcome[]): GameState
   const ready = isReady(state.scheduled, { day: state.day, hour: state.hour });
   const readyIds = new Set(ready.map((mission) => mission.id));
   for (const mission of ready) {
-    outcomes.push({
+    outcomes.push({ // TODO: return the outcomes
       _tag: "outcome/mission-available",
       type: "MissionAvailable",
       missionId: String(mission.id),
