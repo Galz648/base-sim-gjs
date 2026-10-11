@@ -82,6 +82,15 @@ function apply(state: GameState, action: Action): Effect.Effect<StepOutcome, Ste
   return _exhaustive;
 }
 
+// Sim-internal runner used by Store: runs `apply` to completion and flattens it into data.
+// Drivers do not use this; they get the Effect from api.step and run it at their own edge.
+function runStep(state: GameState, action: Action): StepResult {
+  return Effect.runSync(Effect.match(apply(state, action), {
+    onFailure: (error): StepFail => ({ ok: false as const, state, error }),
+    onSuccess: (result: StepOutcome): StepOk => ({ ok: true as const, result }),
+  }));
+}
+
 function incrementTime(time: Time): Time {
   const increment = (x: number) => x + 1;
   const total_time = increment(time.hour) + time.day * 24;
@@ -307,4 +316,4 @@ class Sim {
 
 
 
-export { Sim, type Store, apply, StepError, StepOk, StepFail, StepOutcome, StepResult}
+export { Sim, type Store, apply, runStep, StepError, StepOk, StepFail, StepOutcome, StepResult}

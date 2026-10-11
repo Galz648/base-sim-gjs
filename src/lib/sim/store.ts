@@ -1,6 +1,5 @@
-import { Effect } from "effect";
 import { GameState, GameEvent, Time, Outcome, Action } from "./domain";
-import { apply, StepFail, StepOk, StepOutcome, StepResult } from "./sim";
+import { runStep, StepResult } from "./sim";
 
 
 type Listener = (result: StepResult) => void;
@@ -16,10 +15,7 @@ export class Store {
   }
 
   dispatch(event:Action): void {
-    const step_result: StepResult = Effect.runSync(Effect.match(apply(this.state, event), {
-      onFailure: (error): StepFail=> ({ ok: false as const,state: this.state ,error }),
-      onSuccess: (result: StepOutcome ): StepOk  => ({ ok: true as const, result }),
-    }));
+    const step_result: StepResult = runStep(this.state, event);
 
     if (step_result.ok) {
       this.state = step_result.result.state
