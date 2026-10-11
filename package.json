@@ -25,7 +25,8 @@
     "watch:sim": "bun --watch bun/entrypoint.ts",
     "editor": "bun tools/godot.ts --editor --path .",
     "config": "bun tools/config.ts",
-    "tui": "bun tui/main.ts"
+    "tui": "bun tui/main.ts",
+    "check:boundary": "bun tools/check-tui-boundary.ts"
   },
   "type": "module",
   "dependencies": {

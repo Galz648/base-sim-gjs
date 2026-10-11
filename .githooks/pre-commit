@@ -1,3 +1,5 @@
 #!/bin/sh
 # Type-check before every commit.
 bun run typecheck || { echo "pre-commit: typecheck failed, commit aborted"; exit 1; }
+# The TUI may only reach the sim through src/lib/sim/api.
+bun tools/check-tui-boundary.ts || { echo "pre-commit: tui boundary violated, commit aborted"; exit 1; }
