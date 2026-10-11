@@ -23,7 +23,8 @@
     "bun": "bun bun/entrypoint.ts",
     "watch:sim": "bun --watch bun/entrypoint.ts",
     "editor": "bun tools/godot.ts --editor --path .",
-    "config": "bun tools/config.ts"
+    "config": "bun tools/config.ts",
+    "tui": "bun tui/main.ts"
   },
   "type": "module",
   "dependencies": {
