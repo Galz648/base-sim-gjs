@@ -1,8 +1,7 @@
 // The two inspect cards. Each is a plain component of facts + a prose blurb.
 import React from "react";
 import { Box, Text } from "ink";
-import { GameState } from "../src/lib/sim/domain";
-import { isDeployable } from "../src/lib/sim/legal";
+import { GameState, canDispatch, unitStatus } from "../src/lib/sim/api";
 import { callBrief, unitBio } from "./flavor";
 import { cardStatus, callItems, nameOf, wrapWords } from "./model";
 
@@ -39,7 +38,7 @@ export const UnitCard = ({ state, index, width }: CardProps) => {
       </Box>
       <Prose width={width}>{unitBio[u.id] ?? "No bio on file."}</Prose>
       <Box marginTop={1}>
-        {isDeployable(u)
+        {unitStatus(state, u.id) === "deployable"
           ? <Text>Could take: {couldTake || "no calls waiting"}</Text>
           : <Text dimColor>Cannot be dispatched right now.</Text>}
       </Box>
@@ -50,25 +49,25 @@ export const UnitCard = ({ state, index, width }: CardProps) => {
 export const CallCard = ({ state, index, width }: CardProps) => {
   const item = callItems(state)[index];
   if (!item) return <Text dimColor>(no call)</Text>;
-  const ready = state.roster.filter(isDeployable);
+  const ready = state.roster.filter((u) => unitStatus(state, u.id) === "deployable");
   const waiting = state.available.find((m) => m.id === item.id);
   const active = state.in_progress.find((m) => m.id === item.id);
   return (
     <Box flexDirection="column">
       <Text bold>CALL BRIEF  {item.name}</Text>
-      <Text dimColor>id {item.id}  {item.status}</Text>
+      <Text dimColor>id {item.id}  {item.status.toUpperCase()}</Text>
       <Box flexDirection="column" marginTop={1}>
         {waiting && <>
           <Fact label="Needs">{waiting.requiredSolders} unit(s)</Fact>
           <Fact label="Duration">{waiting.duration}h</Fact>
           <Fact label="Ready now">{ready.length ? ready.map((u) => u.name).join(", ") : "nobody"}</Fact>
-          <Fact label="Dispatch">{ready.length >= waiting.requiredSolders ? "possible" : "not enough ready units"}</Fact>
+          <Fact label="Dispatch">{canDispatch(state, item.id) ? "possible" : "not enough ready units"}</Fact>
         </>}
         {active && <>
           <Fact label="Remaining">{active.remaining}h</Fact>
           <Fact label="Crew">{active.assigned.map((i) => nameOf(state, i)).join(", ")}</Fact>
         </>}
-        {item.status === "DONE" && <Text>Resolved.</Text>}
+        {item.status === "done" && <Text>Resolved.</Text>}
       </Box>
       <Prose width={width}>{callBrief[item.id] ?? "No briefing on file."}</Prose>
     </Box>

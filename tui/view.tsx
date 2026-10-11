@@ -1,7 +1,7 @@
 // The screen, declaratively. Read <Screen> first: it is the whole TUI layout.
 import React from "react";
 import { Box, renderToString, Text } from "ink";
-import { Action, GameState } from "../src/lib/sim/domain";
+import { Action, GameState } from "../src/lib/sim/api";
 import { CallCard, UnitCard } from "./cards";
 import {
   callDetail, callItems, describeAction, LEFT_WIDTH, rosterStatus,
@@ -89,7 +89,7 @@ const Calls = ({ state, ui }: PaneProps) => {
       {items.map((c, i) => {
         const active = ui.focus === "calls" && ui.sel.calls === i;
         return <Row key={`${c.status}-${c.id}`} active={active}>
-          {` ${active ? ">" : " "}[${c.status.padEnd(7)}] ${c.name} (${callDetail(state, c)})`}
+          {` ${active ? ">" : " "}[${c.status.toUpperCase().padEnd(7)}] ${c.name} (${callDetail(state, c)})`}
         </Row>;
       })}
     </Section>

@@ -1,4 +1,4 @@
-import { GameState, ScheduledMission } from "../src/lib/sim/domain";
+import { GameState, ScheduledMission } from "../src/lib/sim/api";
 
 const call = (id: number, name: string, hour: number, duration: number, need: number): ScheduledMission => ({
   _tag: "mission/scheduled",

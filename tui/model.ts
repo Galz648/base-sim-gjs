@@ -1,6 +1,6 @@
 // Pure data + text. No layout, no Ink: everything the view reads about the game.
-import { Action, GameState, Outcome } from "../src/lib/sim/domain";
-import { isDeployable } from "../src/lib/sim/legal";
+import { Action, GameState, Outcome, callBoard, unitStatus } from "../src/lib/sim/api";
+import type { CallRow } from "../src/lib/sim/api";
 
 export type Pane = "actions" | "roster" | "calls";
 export const PANES: Pane[] = ["roster", "calls", "actions"];
@@ -27,39 +27,33 @@ export function describeOutcome(s: GameState, o: Outcome): string {
   }
 }
 
-// Flat, ordered list behind the "Calls" pane cursor.
-export type CallItem = { id: number; name: string; status: "WAITING" | "ACTIVE" | "DONE" };
-export function callItems(s: GameState): CallItem[] {
-  return [
-    ...s.available.map((m): CallItem => ({ id: m.id, name: m.name, status: "WAITING" })),
-    ...s.in_progress.map((m): CallItem => ({ id: m.id, name: m.name, status: "ACTIVE" })),
-    ...s.completed.map((m): CallItem => ({ id: m.id, name: m.name, status: "DONE" })),
-  ];
-}
+// Flat, ordered list behind the "Calls" pane cursor. Owned by the sim.
+export type CallItem = CallRow;
+export const callItems = callBoard;
 
 export function rosterStatus(s: GameState, id: number): string {
-  const u = s.roster.find((r) => r.id === id)!;
+  const status = unitStatus(s, id);
   const on = s.in_progress.find((m) => m.assigned.includes(id));
-  if (isDeployable(u)) return "DEPLOYABLE";
-  if (on) return `busy on ${on.name} (${on.remaining}h left)`;
-  return u.condition === "injured" ? "injured" : "resting-unfit";
+  if (status === "deployable") return "DEPLOYABLE";
+  if (status === "busy" && on) return `busy on ${on.name} (${on.remaining}h left)`;
+  return status === "injured" ? "injured" : "resting-unfit";
 }
 
 // Unit card wording, distinct from the roster row.
 export function cardStatus(s: GameState, id: number): string {
-  const u = s.roster.find((r) => r.id === id)!;
+  const status = unitStatus(s, id);
   const on = s.in_progress.find((m) => m.assigned.includes(id));
-  if (isDeployable(u)) return "ready to deploy";
-  if (on) return `busy on ${on.name}`;
-  return u.condition === "injured" ? "injured" : "not resting";
+  if (status === "deployable") return "ready to deploy";
+  if (status === "busy" && on) return `busy on ${on.name}`;
+  return status === "injured" ? "injured" : "not resting";
 }
 
 export function callDetail(s: GameState, c: CallItem): string {
-  if (c.status === "WAITING") {
+  if (c.status === "waiting") {
     const m = s.available.find((x) => x.id === c.id)!;
     return `needs ${m.requiredSolders}, ${m.duration}h`;
   }
-  if (c.status === "ACTIVE") {
+  if (c.status === "active") {
     const m = s.in_progress.find((x) => x.id === c.id)!;
     return `${m.remaining}h left, ${names(s, m.assigned)}`;
   }

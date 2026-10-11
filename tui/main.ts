@@ -1,5 +1,4 @@
-import { Action, GameState } from "../src/lib/sim/domain";
-import { legalActions } from "../src/lib/sim/legal";
+import { Action, GameState, legalActions } from "../src/lib/sim/api";
 import { step } from "./driver";
 import { scenario } from "./scenario";
 import { callItems, describeOutcome, Hit, LEFT_WIDTH, LogEntry, PANES, render, UiState } from "./view";
