@@ -23,16 +23,16 @@ export function scenario(): GameState {
   return {
     day: 1,
     hour: 0,
-    roster: [unit(1, "Unit-A"), unit(2, "Unit-B"), unit(3, "Unit-C")],
+    roster: [unit(1, "Kita Alef"), unit(2, "Kita Bet"), unit(3, "Kita Gimel")],
     available: [],
     in_progress: [],
     completed: [],
     scheduled: [
-      call(1, "Burglary", 2, 3, 1),
-      call(2, "Traffic Collision", 3, 2, 1),
-      call(3, "Armed Robbery", 5, 4, 2),
-      call(4, "Noise Complaint", 6, 1, 1),
-      call(5, "Fire Alarm", 8, 3, 2),
+      call(1, "Suspicious Object", 2, 3, 1),
+      call(2, "Perimeter Alarm", 3, 2, 1),
+      call(3, "Convoy Escort", 5, 4, 2),
+      call(4, "Gate Inspection", 6, 1, 1),
+      call(5, "Medevac Standby", 8, 3, 2),
     ],
   };
 }
