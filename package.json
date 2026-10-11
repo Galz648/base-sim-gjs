@@ -2,6 +2,7 @@
   "name": "base-sim",
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/react": "^19.3.0",
     "fast-check": "^4.10.2",
     "source-map-js": "^1.2.2",
     "typescript": "^5.9.0"
@@ -28,6 +29,8 @@
   },
   "type": "module",
   "dependencies": {
-    "effect": "^4.0.2"
+    "effect": "^4.0.2",
+    "ink": "^8.0.0",
+    "react": "^19.3.0"
   }
 }
